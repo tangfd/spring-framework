@@ -24,6 +24,7 @@ import org.springframework.beans.factory.support.AutowireCandidateQualifier;
 import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanNameGenerator;
+import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.env.StandardEnvironment;
@@ -57,8 +58,12 @@ public class AnnotatedBeanDefinitionReader {
 
 
 	/**
-	 * 通过给定的 BeanDefinition 注册器实例化一个基于注解的 BeanDefinition 读取器，
-	 * 如果给定的 registry 实现了{@link EnvironmentCapable}接口，
+	 * 1. 通过给定的 BeanDefinition 注册器实例化一个基于注解的 BeanDefinition 读取器，
+	 * 2. 如果给定的 registry 实现了{@link EnvironmentCapable}接口，
+	 * 则直接通过{@link AbstractApplicationContext#getEnvironment()}方法获取Environment实例{@link StandardEnvironment}
+	 * 如果没有实现{@link EnvironmentCapable}接口，直接创建{@link StandardEnvironment}实例
+	 * 3. 实例化{@link Conditional} 注解的解析器
+	 * <p>
 	 * Create a new {@code AnnotatedBeanDefinitionReader} for the given registry.
 	 * If the registry is {@link EnvironmentCapable}, e.g. is an {@code ApplicationContext},
 	 * the {@link Environment} will be inherited, otherwise a new
@@ -87,7 +92,9 @@ public class AnnotatedBeanDefinitionReader {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 		Assert.notNull(environment, "Environment must not be null");
 		this.registry = registry;
+		//@Conditional 注解的解析器
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+		//注册注解配置的后置处理器
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}
 

@@ -16,15 +16,12 @@
 
 package org.springframework.context.annotation;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
+import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.EnvironmentCapable;
@@ -38,7 +35,12 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.MultiValueMap;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
+ * {@link Conditional} 注解的解析器
  * Internal class used to evaluate {@link Conditional} annotations.
  *
  * @author Phillip Webb
@@ -54,7 +56,7 @@ class ConditionEvaluator {
 	 * Create a new {@link ConditionEvaluator} instance.
 	 */
 	public ConditionEvaluator(@Nullable BeanDefinitionRegistry registry,
-			@Nullable Environment environment, @Nullable ResourceLoader resourceLoader) {
+							  @Nullable Environment environment, @Nullable ResourceLoader resourceLoader) {
 
 		this.context = new ConditionContextImpl(registry, environment, resourceLoader);
 	}
@@ -64,6 +66,7 @@ class ConditionEvaluator {
 	 * Determine if an item should be skipped based on {@code @Conditional} annotations.
 	 * The {@link ConfigurationPhase} will be deduced from the type of item (i.e. a
 	 * {@code @Configuration} class will be {@link ConfigurationPhase#PARSE_CONFIGURATION})
+	 *
 	 * @param metadata the meta data
 	 * @return if the item should be skipped
 	 */
@@ -72,9 +75,11 @@ class ConditionEvaluator {
 	}
 
 	/**
+	 * 根据@conditional 注解确定是否应跳过项。
 	 * Determine if an item should be skipped based on {@code @Conditional} annotations.
+	 *
 	 * @param metadata the meta data
-	 * @param phase the phase of the call
+	 * @param phase    the phase of the call
 	 * @return if the item should be skipped
 	 */
 	public boolean shouldSkip(@Nullable AnnotatedTypeMetadata metadata, @Nullable ConfigurationPhase phase) {
@@ -127,6 +132,7 @@ class ConditionEvaluator {
 
 
 	/**
+	 * Condition上下文实现类
 	 * Implementation of a {@link ConditionContext}.
 	 */
 	private static class ConditionContextImpl implements ConditionContext {
@@ -144,8 +150,18 @@ class ConditionEvaluator {
 		@Nullable
 		private final ClassLoader classLoader;
 
+		/**
+		 * 推断相应参数的类型，并赋值
+		 * beanFactory 推断获取{@link ConfigurableListableBeanFactory}类型的BeanFactory，直接赋值
+		 * classLoader 推断并赋值ClassLoader
+		 *
+		 * @param registry       BeanDefinition 注册器，直接赋值
+		 * @param environment    环境变量，推断是否实现{@link EnvironmentCapable}接口，
+		 *                       在{@link AbstractApplicationContext#getEnvironment()}方法中也是实例化{@link StandardEnvironment}
+		 * @param resourceLoader 资源加载器
+		 */
 		public ConditionContextImpl(@Nullable BeanDefinitionRegistry registry,
-				@Nullable Environment environment, @Nullable ResourceLoader resourceLoader) {
+									@Nullable Environment environment, @Nullable ResourceLoader resourceLoader) {
 
 			this.registry = registry;
 			this.beanFactory = deduceBeanFactory(registry);
@@ -181,7 +197,7 @@ class ConditionEvaluator {
 
 		@Nullable
 		private ClassLoader deduceClassLoader(@Nullable ResourceLoader resourceLoader,
-				@Nullable ConfigurableListableBeanFactory beanFactory) {
+											  @Nullable ConfigurableListableBeanFactory beanFactory) {
 
 			if (resourceLoader != null) {
 				ClassLoader classLoader = resourceLoader.getClassLoader();
