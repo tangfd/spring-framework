@@ -17,6 +17,7 @@
 package org.springframework.context.annotation;
 
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
+import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
@@ -24,7 +25,10 @@ import org.springframework.beans.factory.support.AutowireCandidateQualifier;
 import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanNameGenerator;
+import org.springframework.context.event.DefaultEventListenerFactory;
+import org.springframework.context.event.EventListenerMethodProcessor;
 import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.env.StandardEnvironment;
@@ -59,10 +63,23 @@ public class AnnotatedBeanDefinitionReader {
 
 	/**
 	 * 1. 通过给定的 BeanDefinition 注册器实例化一个基于注解的 BeanDefinition 读取器，
+	 * <br/>
 	 * 2. 如果给定的 registry 实现了{@link EnvironmentCapable}接口，
 	 * 则直接通过{@link AbstractApplicationContext#getEnvironment()}方法获取Environment实例{@link StandardEnvironment}
 	 * 如果没有实现{@link EnvironmentCapable}接口，直接创建{@link StandardEnvironment}实例
+	 * <br/>
 	 * 3. 实例化{@link Conditional} 注解的解析器
+	 * <br/>
+	 * 4. 注册注解配置的后置处理器 <ul>
+	 * <li>{@link AnnotationAwareOrderComparator}:用来支持Spring的Ordered类、@Order注解和@Priority注解</li>
+	 * <li>{@link ContextAnnotationAutowireCandidateResolver}:设置AutowireCandidateResolver解析器，对@Lazy(延迟处理)，@Qualifier，@Value，泛型注入进行解析</li>
+	 * <li>{@link ConfigurationClassPostProcessor}(BeanFactoryPostProcessor):对@Configuration注解进行解析</li>
+	 * <li>{@link AutowiredAnnotationBeanPostProcessor}(BeanPostProcessor):对@Autowired,@Value,@Inject注解进行解析</li>
+	 * <li>{@link CommonAnnotationBeanPostProcessor}(BeanPostProcessor):对JSR-250定义的注解@Resource，@WebServiceRef，@PostConstruct，@PreDestroy进行支持</li>
+	 * <li>{@link PersistenceAnnotationBeanPostProcessor}(BeanPostProcessor):对JPA进行支持,当引入了JPA的依赖包时，才会进行注册</li>
+	 * <li>{@link EventListenerMethodProcessor}(BeanFactoryPostProcessor):将@EventListener方法注册为单个ApplicationListener实例</li>
+	 * <li>{@link DefaultEventListenerFactory}:它是@EventListener的默认实现</li>
+	 * </ul>
 	 * <p>
 	 * Create a new {@code AnnotatedBeanDefinitionReader} for the given registry.
 	 * If the registry is {@link EnvironmentCapable}, e.g. is an {@code ApplicationContext},

@@ -36,6 +36,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
+ * 策略接口的完整实现 它不仅仅支持父类所有的功能，
+ * 还支持@Lazy懒处理(注意此处懒处理(延迟处理)，不是懒加载)
  * Complete implementation of the
  * {@link org.springframework.beans.factory.support.AutowireCandidateResolver} strategy
  * interface, providing support for qualifier annotations as well as for lazy resolution
