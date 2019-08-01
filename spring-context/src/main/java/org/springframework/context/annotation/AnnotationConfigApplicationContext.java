@@ -58,15 +58,15 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 
 
 	/**
-	 * 初始化 BeanDefinition 读取器和扫描器，在此之前调用父类{@link GenericApplicationContext}的构造方法，
+	 * 初始化 BeanDefinition 读取器和包扫描器，在此之前调用父类{@link GenericApplicationContext}的构造方法，
 	 * 实例化 BeanFactory {@link DefaultListableBeanFactory}
 	 * Create a new AnnotationConfigApplicationContext that needs to be populated
 	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
 	 */
 	public AnnotationConfigApplicationContext() {
-		// 读初始化 BeanDefinition 读取器和扫描器
+		// 初始化 BeanDefinition 读取器和扫描器
 		this.reader = new AnnotatedBeanDefinitionReader(this);
-		// 扫描 classPath 类路径下的 BeanDefinition ,可以试通过xml配置的Bean
+		// 初始化包扫描器，设置默认的注解过滤器, 并将符合过滤条件的Bean添加到IOC中
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -89,8 +89,11 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * @param annotatedClasses one or more annotated classes, 标注了{@link Configuration} 注解的配置类
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
+		//初始化 BeanDefinition 读取器和包扫描器
 		this();
+		//注册指定的注解配置类
 		register(annotatedClasses);
+		//刷新容器
 		refresh();
 	}
 

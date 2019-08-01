@@ -154,6 +154,8 @@ public class AnnotatedBeanDefinitionReader {
 
 
 	/**
+	 * 注册一个或者多个需要处理的注解类<br/>
+	 * 对register的调用是等幂的；多次添加同一个带注解的类没有其他效果
 	 * Register one or more annotated classes to be processed.
 	 * <p>Calls to {@code register} are idempotent; adding the same
 	 * annotated class more than once has no additional effect.
@@ -168,6 +170,7 @@ public class AnnotatedBeanDefinitionReader {
 	}
 
 	/**
+	 * 根据指定的class，注册Bean定义信息，并从声明了注解的类派生其元数据<br/>
 	 * Register a bean from the given bean class, deriving its metadata from
 	 * class-declared annotations.
 	 *
@@ -270,6 +273,7 @@ public class AnnotatedBeanDefinitionReader {
 	}
 
 	/**
+	 * 从给定的bean类中注册bean，并从声明了注解的类派生其元数据。
 	 * Register a bean from the given bean class, deriving its metadata from
 	 * class-declared annotations.
 	 *
@@ -287,7 +291,9 @@ public class AnnotatedBeanDefinitionReader {
 									@Nullable Class<? extends Annotation>[] qualifiers, @Nullable Supplier<T> supplier,
 									@Nullable BeanDefinitionCustomizer[] customizers) {
 
+		// 获取配置类的注解元信息
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(annotatedClass);
+		// 标注的类是否有 @Conditional 注解
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
 		}

@@ -238,6 +238,12 @@ public abstract class AnnotationConfigUtils {
 		}
 	}
 
+	/**
+	 * 对配置类上标注的 {@link Lazy}, {@link Primary}, {@link Role}, {@link Description}, {@link DependsOn}注解进行解析，
+	 * 并将注解信息设置到注解元信息中
+	 *
+	 * @param abd 注解类的定义信息
+	 */
 	public static void processCommonDefinitionAnnotations(AnnotatedBeanDefinition abd) {
 		processCommonDefinitionAnnotations(abd, abd.getMetadata());
 	}

@@ -75,7 +75,10 @@ class ConditionEvaluator {
 	}
 
 	/**
-	 * 根据@conditional 注解确定是否应跳过项。
+	 * 根据@conditional 注解确定是否应跳过 <ul>
+	 *     <li>1. 如果没有标注@conditional 注解，最直接返回false，在解析时不进行跳过</li>
+	 *     <li></li>
+	 * </ul>
 	 * Determine if an item should be skipped based on {@code @Conditional} annotations.
 	 *
 	 * @param metadata the meta data
@@ -83,6 +86,7 @@ class ConditionEvaluator {
 	 * @return if the item should be skipped
 	 */
 	public boolean shouldSkip(@Nullable AnnotatedTypeMetadata metadata, @Nullable ConfigurationPhase phase) {
+		// 如果指定类中没有添加 @conditional 注解 ，在解析时不进行跳过
 		if (metadata == null || !metadata.isAnnotated(Conditional.class.getName())) {
 			return false;
 		}
