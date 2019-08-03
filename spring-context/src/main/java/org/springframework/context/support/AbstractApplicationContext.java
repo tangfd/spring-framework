@@ -547,12 +547,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			prepareBeanFactory(beanFactory);
 
 			try {
+				// 在容器刷新前 允许子类预处理bean工厂
 				// Allows post-processing of the bean factory in context subclasses.
 				postProcessBeanFactory(beanFactory);
 
+				//执行所有的BeanFactory后置处理器
 				// Invoke factory processors registered as beans in the context.
 				invokeBeanFactoryPostProcessors(beanFactory);
 
+				//注册所有的Bean后置处理器
 				// Register bean processors that intercept bean creation.
 				registerBeanPostProcessors(beanFactory);
 
@@ -757,11 +760,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 1. 实例化并执行所有已注册的BeanFactory后置处理器组件 {@link BeanFactoryPostProcessor}<br/>
+	 * 2. BeanFactory后置处理器过程中，按照实现 PriorityOrdered，Ordered，未实现优先级接口的顺序进行实例化及执行<br/>
+	 * 3. 此方法必须在单实例bean实例化之前执行
 	 * Instantiate and invoke all registered BeanFactoryPostProcessor beans,
 	 * respecting explicit order if given.
 	 * <p>Must be called before singleton instantiation.
 	 */
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
+		//实例化并执行所有已注册的BeanFactory后置处理器组件
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime
