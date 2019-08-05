@@ -26,13 +26,19 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.beans.support.ResourceEditorRegistrar;
 import org.springframework.context.*;
 import org.springframework.context.event.*;
 import org.springframework.context.expression.StandardBeanExpressionResolver;
 import org.springframework.context.weaving.LoadTimeWeaverAware;
 import org.springframework.context.weaving.LoadTimeWeaverAwareProcessor;
+import org.springframework.core.Ordered;
+import org.springframework.core.PriorityOrdered;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.convert.ConversionService;
@@ -555,7 +561,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Invoke factory processors registered as beans in the context.
 				invokeBeanFactoryPostProcessors(beanFactory);
 
-				//注册所有的Bean后置处理器
+				//注册所有的Bean后置处理器,再bean创建过程中执行
 				// Register bean processors that intercept bean creation.
 				registerBeanPostProcessors(beanFactory);
 
@@ -761,11 +767,28 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 	/**
 	 * 1. 实例化并执行所有已注册的BeanFactory后置处理器组件 {@link BeanFactoryPostProcessor}<br/>
-	 * 2. BeanFactory后置处理器过程中，按照实现 PriorityOrdered，Ordered，未实现优先级接口的顺序进行实例化及执行<br/>
+	 * 2. BeanFactory后置处理器过程中，按照实现 PriorityOrdered，Ordered，未实现优先级接口的顺序
+	 * 进行实例化（通过调用beanFactory的getBean方法进行实例化）及执行 <ul>
+	 * <li>
+	 * 1. 如果bean工厂实现了BeanDefinitionRegistry接口，先执行类型为{@link BeanDefinitionRegistryPostProcessor}的BeanFactory后置处理器 <ul>
+	 * <li>1. 首先获取类型为 BeanDefinitionRegistryPostProcessor 的BeanFactory后置处理器，找到实现PriorityOrdered接口的，
+	 * 通过bean工厂的getBean方法实例化，执行{@link BeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry(BeanDefinitionRegistry)}方法</li>
+	 * <li>2. 重新获取bean工厂中类型为BeanDefinitionRegistryPostProcessor 的BeanFactory后置处理器，执行实现了Ordered接口的，
+	 * 之前的BeanDefinitionRegistryPostProcessor执行过程中，可能会注册新的BeanDefinitionRegistryPostProcessor，
+	 * 所以需要从bean工厂中重新获取</li>
+	 * <li>3. 重复获取bean工厂中类型为BeanDefinitionRegistryPostProcessor 的BeanFactory后置处理器，执行没有实现优先级接口的</li>
+	 * <li>4. 执行完BeanDefinitionRegistryPostProcessor的接口后，再执行所有BeanFactory后置处理器
+	 * 的{@link BeanDefinitionRegistryPostProcessor#postProcessBeanFactory(ConfigurableListableBeanFactory)}方法</li>
+	 * </ul>
+	 * </li>
+	 * <li>2. 获取所有类型BeanFactoryPostProcessor的BeanFactory后置处理器，同样是调用bean工厂的getBean方法进行实例化,
+	 * 排除上面已经执行过的BeanFactory后置处理器,按照 PriorityOrdered，Ordered，未实现优先级接口的顺序进行实例化及执行</li>
+	 * <li>3. 第二步执行{@link BeanFactoryPostProcessor#postProcessBeanFactory(ConfigurableListableBeanFactory)}时
+	 * 不需要重复从bean工厂中获取，只需要按照优先级进行分组，实例化，执行</li>
+	 * </ul>
 	 * 3. 此方法必须在单实例bean实例化之前执行
-	 * Instantiate and invoke all registered BeanFactoryPostProcessor beans,
-	 * respecting explicit order if given.
-	 * <p>Must be called before singleton instantiation.
+	 *
+	 * @param beanFactory bean工厂
 	 */
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
 		//实例化并执行所有已注册的BeanFactory后置处理器组件
@@ -780,6 +803,16 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 注册(实例化)所有的{@link BeanPostProcessor}，存储再bean工厂中，再bean创建的过程中进行执行
+	 * <ul>
+	 * <li>1. 从bean工厂中获取所有的{@link BeanPostProcessor}（bean后置处理器）</li>
+	 * <li>2. 遍历所有的BeanPostProcessor，按照 实现{@link PriorityOrdered}，{@link Ordered}，未实现顺序接口 进行分组,实例化，注册</li>
+	 * <li>3. 单独记录所有的{@link MergedBeanDefinitionPostProcessor}类型的BeanPostProcessor</li>
+	 * <li>4. 重新注册{@link MergedBeanDefinitionPostProcessor}类型的BeanPostProcessor，
+	 * bean工厂注册过程中，会先删除已注册的BeanPostProcessor，再重新注册BeanPostProcessor</li>
+	 * <li>5. 重新注册{@link ApplicationListener}的bean后置处理器，将其移动到处理器链的末尾，用于检查代理类，
+	 * 此后置处理在{@link AbstractApplicationContext#prepareBeanFactory(ConfigurableListableBeanFactory)}方法中已经注册过</li>
+	 * </ul>
 	 * Instantiate and register all BeanPostProcessor beans,
 	 * respecting explicit order if given.
 	 * <p>Must be called before any instantiation of application beans.
