@@ -531,6 +531,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 返回静态指定的应用程序监听器列表。
 	 * Return the list of statically specified ApplicationListeners.
 	 */
 	public Collection<ApplicationListener<?>> getApplicationListeners() {
@@ -565,18 +566,23 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Register bean processors that intercept bean creation.
 				registerBeanPostProcessors(beanFactory);
 
+				// 为此上下文初始化消息源,实现国际化
 				// Initialize message source for this context.
 				initMessageSource();
 
+				// 为此上下文初始化应用事件派发器
 				// Initialize event multicaster for this context.
 				initApplicationEventMulticaster();
 
+				// 留给子类重写，用于初始化一些特殊的bean
 				// Initialize other special beans in specific context subclasses.
 				onRefresh();
 
+				// 注册(不进行实例化)事件监听器
 				// Check for listener beans and register them.
 				registerListeners();
 
+				// 实例化剩下的所有单实例bean
 				// Instantiate all remaining (non-lazy-init) singletons.
 				finishBeanFactoryInitialization(beanFactory);
 
@@ -854,6 +860,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 为此上下文初始化应用事件派发器
+	 * 如果容器中未注册事件派发器，则创建一个{@link SimpleApplicationEventMulticaster}实例，并注册到容器中
+	 * <p>
+	 * 时间派发器中保存中容器中注册的所有应用事件监听器{@link ApplicationListener}
+	 * <p>
+	 * spring运行过程中，当有事件发布时，会调用事件派发器的通知方法，遍历相应事件类型的每一个事件监听器，
+	 * 并调用{@link ApplicationListener#onApplicationEvent(ApplicationEvent)}方法
+	 * <p>
 	 * Initialize the ApplicationEventMulticaster.
 	 * Uses SimpleApplicationEventMulticaster if none defined in the context.
 	 *
@@ -916,15 +930,28 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 将实现了{@link ApplicationListener} 接口的bean作为监听器，注册到事件派发器中（不进行实例化）
+	 * <ul>
+	 * <li>1. 首先注册静态指定的侦听器(在容器初始化过程中，直接指定的一些监听器),
+	 * 获取上一步初始化好的事件派发器，遍历每一个监听器，并将其添加到派发器中</li>
+	 * <li>2. 获取容器中所有类型为{@link ApplicationListener}的bean名称，并添加到派发器中,
+	 * 不在这里实例化bean：需要将所有常规bean都保持为未初始化状态，以让后置处理器应用于它们！</li>
+	 * <li>3. 通过上一步初始化的事件派发器，发布spring容器初始化时在早期注册的应用事件,
+	 * 如果容器中注册的事件派发器中设置了Executor ，则在派发事件时以异步方式进行</li>
+	 * </ul>
 	 * Add beans that implement ApplicationListener as listeners.
 	 * Doesn't affect other listeners, which can be added without being beans.
 	 */
 	protected void registerListeners() {
+		// 首先注册静态指定的侦听器(在容器初始化过程中，直接指定的一些监听器)
+		// 获取上一步初始化好的事件派发器，遍历每一个监听器，并将其添加到派发器中
 		// Register statically specified listeners first.
 		for (ApplicationListener<?> listener : getApplicationListeners()) {
 			getApplicationEventMulticaster().addApplicationListener(listener);
 		}
 
+		// 获取容器中所有类型为ApplicationListener的bean名称，并添加到派发器中
+		// 不在这里实例化bean：需要将所有常规bean都保持为未初始化状态，以让后置处理器应用于它们！
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let post-processors apply to them!
 		String[] listenerBeanNames = getBeanNamesForType(ApplicationListener.class, true, false);
@@ -932,6 +959,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			getApplicationEventMulticaster().addApplicationListenerBean(listenerBeanName);
 		}
 
+		// 通过上一步初始化的事件派发器，发布spring容器初始化时在早期注册的应用事件
+		// 如果容器中注册的事件派发器中设置了Executor ，则在派发事件时以异步方式进行
 		// Publish early application events now that we finally have a multicaster...
 		Set<ApplicationEvent> earlyEventsToProcess = this.earlyApplicationEvents;
 		this.earlyApplicationEvents = null;
@@ -943,6 +972,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 完成bean工厂的初始化，并实例化所有剩下的单实例bean
+	 * <p>
 	 * Finish the initialization of this context's bean factory,
 	 * initializing all remaining singleton beans.
 	 */
