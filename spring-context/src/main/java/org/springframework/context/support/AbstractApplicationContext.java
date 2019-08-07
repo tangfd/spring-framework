@@ -24,15 +24,14 @@ import org.springframework.beans.PropertyEditorRegistrar;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
-import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
+import org.springframework.beans.factory.config.*;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.beans.support.ResourceEditorRegistrar;
 import org.springframework.context.*;
+import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor;
 import org.springframework.context.event.*;
 import org.springframework.context.expression.StandardBeanExpressionResolver;
 import org.springframework.context.weaving.LoadTimeWeaverAware;
@@ -974,6 +973,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	/**
 	 * 完成bean工厂的初始化，并实例化所有剩下的单实例bean
 	 * <p>
+	 * Bean后置处理器执行的顺序和时机<ul>
+	 * <li>1. {@link InstantiationAwareBeanPostProcessor}, 在bean实例对象创建之前执行，尝试返回代理对象，
+	 * Spring AOP 就是基于此后置处理器进行实现的</li>
+	 * <li>2. 创建完成bean实例后，在为bean属性赋值之前执行{@link MergedBeanDefinitionPostProcessor},
+	 * 例如{@link CommonAnnotationBeanPostProcessor},{@link AutowiredAnnotationBeanPostProcessor},{@link ApplicationListenerDetector}</li>
+	 * <li></li>
+	 * </ul>
 	 * Finish the initialization of this context's bean factory,
 	 * initializing all remaining singleton beans.
 	 */

@@ -1,6 +1,7 @@
 package com.tfd.study.ioc.refresh;
 
 import com.tfd.study.ioc.refresh.domain.Blue;
+import com.tfd.study.ioc.refresh.domain.Red;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,5 +21,10 @@ public class TestIOCRefresh {
 	@Bean
 	public Blue blue() {
 		return new Blue();
+	}
+
+	@Bean
+	public Red red() {
+		return new Red();
 	}
 }
