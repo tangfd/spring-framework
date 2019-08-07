@@ -60,26 +60,33 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry {
 
 	/**
+	 * 单实例bean对象的缓存：key：beanName，value:bean
 	 * Cache of singleton objects: bean name to bean instance.
 	 */
 	private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
 
 	/**
+	 * 单例工厂的缓存：key:beanName,value:工厂对象
+	 * 在单实例备案对象创建完成后，尽早暴露单实例bean时往此集合中添加工厂对象实例，以解析循环依赖，
+	 * 当单实例bean初始化完成后，将bean保存到 singletonObjects 对象中，并删除此处的对象引用
 	 * Cache of singleton factories: bean name to ObjectFactory.
 	 */
 	private final Map<String, ObjectFactory<?>> singletonFactories = new HashMap<>(16);
 
 	/**
+	 * 早期单实例对象的缓存：key：beanName，value:bean
 	 * Cache of early singleton objects: bean name to bean instance.
 	 */
 	private final Map<String, Object> earlySingletonObjects = new HashMap<>(16);
 
 	/**
+	 * 已经注册的单例beanName集合
 	 * Set of registered singletons, containing the bean names in registration order.
 	 */
 	private final Set<String> registeredSingletons = new LinkedHashSet<>(256);
 
 	/**
+	 * 当前正在创建的beanName集合
 	 * Names of beans that are currently in creation.
 	 */
 	private final Set<String> singletonsCurrentlyInCreation =

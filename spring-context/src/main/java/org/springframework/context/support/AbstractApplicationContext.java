@@ -21,13 +21,13 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.CachedIntrospectionResults;
 import org.springframework.beans.PropertyEditorRegistrar;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.config.*;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.beans.factory.support.DefaultSingletonBeanRegistry;
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.beans.support.ResourceEditorRegistrar;
 import org.springframework.context.*;
@@ -368,6 +368,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 通过事件派发器发布时应用事件
 	 * Publish the given event to all listeners.
 	 * <p>Note: Listeners get initialized after the MessageSource, to be able
 	 * to access it within listener implementations. Thus, MessageSource
@@ -585,6 +586,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Instantiate all remaining (non-lazy-init) singletons.
 				finishBeanFactoryInitialization(beanFactory);
 
+				// 完成容器的刷新工作，发布容器刷新完成事件
 				// Last step: publish corresponding event.
 				finishRefresh();
 			} catch (BeansException ex) {
@@ -891,6 +893,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	}
 
 	/**
+	 * 初始化一个生命周期处理器，并添加到bean工厂中
 	 * Initialize the LifecycleProcessor.
 	 * Uses DefaultLifecycleProcessor if none defined in the context.
 	 *
@@ -976,9 +979,44 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * Bean后置处理器执行的顺序和时机<ul>
 	 * <li>1. {@link InstantiationAwareBeanPostProcessor}, 在bean实例对象创建之前执行，尝试返回代理对象，
 	 * Spring AOP 就是基于此后置处理器进行实现的</li>
-	 * <li>2. 创建完成bean实例后，在为bean属性赋值之前执行{@link MergedBeanDefinitionPostProcessor},
-	 * 例如{@link CommonAnnotationBeanPostProcessor},{@link AutowiredAnnotationBeanPostProcessor},{@link ApplicationListenerDetector}</li>
-	 * <li></li>
+	 * <li>2. 创建完成bean实例后，在为bean属性赋值之前执行{@link MergedBeanDefinitionPostProcessor}类型的Bean后置处理器,
+	 * 例如{@link CommonAnnotationBeanPostProcessor},{@link AutowiredAnnotationBeanPostProcessor},{@link ApplicationListenerDetector}，
+	 * 来解析bean中通过{@link Resource @Resource},{@link Autowired @Autowired}进行注入的属性</li>
+	 * <li>3. 创建完成bean实例后，在为bean属性赋值时，
+	 * 执行{@link InstantiationAwareBeanPostProcessor#postProcessAfterInstantiation}判断是否需要继续为bean属性赋值,
+	 * 如果需要，执行{@link InstantiationAwareBeanPostProcessor#postProcessProperties}和
+	 * {@link InstantiationAwareBeanPostProcessor#postProcessPropertyValues} 解析属性值</li>
+	 * <li>
+	 * 4. 赋值完成之后，执行初始化方法 <ul>
+	 * <li>
+	 * 1. 执行Aware接口方法 <ul>
+	 * <li>{@link BeanNameAware#setBeanName(String)}</li>
+	 * <li>{@link BeanClassLoaderAware#setBeanClassLoader(ClassLoader)}</li>
+	 * <li>{@link BeanFactoryAware#setBeanFactory(BeanFactory)}</li>
+	 * </ul>
+	 * </li>
+	 * <li>2. 遍历执行每一个bean后置处理器的{@link BeanPostProcessor#postProcessBeforeInitialization(Object, String)}方法
+	 * 如果遍历过程中，有一个后置处理器返回的对象为空，则直接返回前一个后置处理器返回的对象，结束遍历</li>
+	 * <li>
+	 * 3. 执行初始化方法 <ul>
+	 * <li>1. 检查bean是否实现了InitializingBean接口，执行{@link InitializingBean#afterPropertiesSet()}方法</li>
+	 * <li>2. 检查bean是否有其他的初始化方法，非afterPropertiesSet，如果有，通过反射调用初始化方法</li>
+	 * </ul>
+	 * </li>
+	 * <li>4. 遍历执行每一个bean后置处理器的{@link BeanPostProcessor#postProcessAfterInitialization(Object, String)}方法
+	 * 如果遍历过程中，有一个后置处理器返回的对象为空，则直接返回前一个后置处理器返回的对象，结束遍历</li>
+	 * </ul>
+	 * </li>
+	 * <li>5. 注册单实例bean的销毁方法，遍历执行{@link DestructionAwareBeanPostProcessor#requiresDestruction(Object)}方法</li>
+	 * <li>6. bean实例创建，初始化完成之后，处理工厂bean，如果当前bean是一个工厂bean，
+	 * 通过调用{@link FactoryBean#getObject()}方法获得指定对象，并添加到缓存中</li>
+	 * <li>7. 当所有的单实例bean全部创建，初始化完成之后，重新遍历所有的bean名称，依此获取其单实例对象，
+	 * 并判断bean实例是否实现了{@link SmartInitializingSingleton}接口，
+	 * 并调用其{@link SmartInitializingSingleton#afterSingletonsInstantiated()}方法</li>
+	 * <li>在通过{@link DefaultSingletonBeanRegistry#getSingleton(java.lang.String)}方法尝试获取单实例bean时，
+	 * 如果此时单实例bean正在创建，且允许访问早期的引用，
+	 * 则会调用{@link SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference(java.lang.Object, java.lang.String)}，
+	 * 获取对指定bean的早期访问的引用，通常是为了解析循环引用</li>
 	 * </ul>
 	 * Finish the initialization of this context's bean factory,
 	 * initializing all remaining singleton beans.
@@ -1029,6 +1067,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Propagate refresh to lifecycle processor first.
 		getLifecycleProcessor().onRefresh();
 
+		//通过事件派发器发布容器刷新完成事件
 		// Publish the final event.
 		publishEvent(new ContextRefreshedEvent(this));
 
