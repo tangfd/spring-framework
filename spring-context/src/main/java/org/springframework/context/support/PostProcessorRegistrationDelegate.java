@@ -81,9 +81,9 @@ final class PostProcessorRegistrationDelegate {
 			BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 			List<BeanFactoryPostProcessor> regularPostProcessors = new ArrayList<>();
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
-			// 遍历所有已注册的BeanFactory后置处理器，找到类型为BeanDefinitionRegistryPostProcessor的
+			// 遍历所有已注册且实例化的BeanFactory后置处理器，找到类型为BeanDefinitionRegistryPostProcessor的
 			// 并执行postProcessBeanDefinitionRegistry()方法
-			// ConfigurationClassPostProcessor 扫描配置类的操作即在此时进行执行
+
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
 				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor) {
 					BeanDefinitionRegistryPostProcessor registryProcessor =
