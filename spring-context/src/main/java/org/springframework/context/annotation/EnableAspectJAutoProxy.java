@@ -37,17 +37,17 @@ import java.lang.annotation.*;
  * 进行调用{@link ImportBeanDefinitionRegistrar#registerBeanDefinitions}方法
  * 实际执行的为（{@link ConfigurationClassPostProcessor#postProcessBeanDefinitionRegistry}），
  * 并向spring容器中注册{@link AnnotationAwareAspectJAutoProxyCreator}组件，
- * 它实际是一个{@link InstantiationAwareBeanPostProcessor},在bean创建之前尝试获取代理对象进行返回，
+ * 它实际是一个{@link InstantiationAwareBeanPostProcessor}，
  * bean名称为：{@link AopConfigUtils#AUTO_PROXY_CREATOR_BEAN_NAME}</li>
  * </ul>
  * 2. {@link AnnotationAwareAspectJAutoProxyCreator} 功能解析
  * <p>
  * 继承关系：
- * {@link AnnotationAwareAspectJAutoProxyCreator}[initBeanFactory]
+ * {@link AnnotationAwareAspectJAutoProxyCreator#initBeanFactory}
  * <p>
  * > {@link AspectJAwareAdvisorAutoProxyCreator}
  * <p>
- * > {@link AbstractAdvisorAutoProxyCreator}[setBeanFactory --> initBeanFactory]
+ * > {@link AbstractAdvisorAutoProxyCreator#setBeanFactory}[ --> initBeanFactory]
  * <p>
  * > {@link AbstractAutoProxyCreator}[setBeanFactory,postProcessBeforeInstantiation,postProcessAfterInitialization]
  * <p>

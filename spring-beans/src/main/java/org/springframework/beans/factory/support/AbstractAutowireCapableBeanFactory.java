@@ -469,7 +469,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			// 在创建bean对象之前，执行Bean后置处理，来返回一个代理对象（Spring AOP 就是基于此来实现的）
+			// 在创建bean对象之前，执行Bean后置处理，来返回一个代理对象
 			// 此时执行的是InstantiationAwareBeanPostProcessor类型的Bean后置处理
 			// 如果此时可以返回代理对象，容器中就是要此对象，否则继续进行bean实例的创建
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
@@ -1794,6 +1794,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
 			// 执行所有bean后置处理器的postProcessAfterInitialization方法
+			// AOP利用此方法判断bean是否需要被增强，产生代理对象，并织入通知方法
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 
