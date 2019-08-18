@@ -37,7 +37,7 @@ import java.lang.annotation.*;
  * 进行调用{@link ImportBeanDefinitionRegistrar#registerBeanDefinitions}方法
  * 实际执行的为（{@link ConfigurationClassPostProcessor#postProcessBeanDefinitionRegistry}），
  * 并向spring容器中注册{@link AnnotationAwareAspectJAutoProxyCreator}组件，
- * 它实际是一个{@link InstantiationAwareBeanPostProcessor}，
+ * 它实际是一个{@link BeanPostProcessor}，
  * bean名称为：{@link AopConfigUtils#AUTO_PROXY_CREATOR_BEAN_NAME}</li>
  * </ul>
  * 2. {@link AnnotationAwareAspectJAutoProxyCreator} 功能解析
@@ -49,7 +49,7 @@ import java.lang.annotation.*;
  * <p>
  * > {@link AbstractAdvisorAutoProxyCreator#setBeanFactory}[ --> initBeanFactory]
  * <p>
- * > {@link AbstractAutoProxyCreator}[setBeanFactory,postProcessBeforeInstantiation,postProcessAfterInitialization]
+ * > {@link AbstractAutoProxyCreator#postProcessAfterInitialization}[setBeanFactory,postProcessBeforeInstantiation,postProcessAfterInitialization]
  * <p>
  * > {@link SmartInstantiationAwareBeanPostProcessor}
  * <p>
