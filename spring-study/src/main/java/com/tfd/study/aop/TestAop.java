@@ -16,6 +16,9 @@ public class TestAop {
 				new AnnotationConfigApplicationContext(TestAop.class);
 		TestService service = context.getBean(TestService.class);
 		System.out.println(service.say("aop"));
-		System.out.println(service.get(10));
+		IService iService = context.getBean(IService.class);
+		System.out.println(iService.say("i-aop"));
+//		System.out.println(service.get(10));
+		System.out.println(iService.get(10));
 	}
 }
