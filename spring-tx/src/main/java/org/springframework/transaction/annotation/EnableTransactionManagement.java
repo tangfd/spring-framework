@@ -16,17 +16,26 @@
 
 package org.springframework.transaction.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
+import org.springframework.aop.framework.autoproxy.InfrastructureAdvisorAutoProxyCreator;
 import org.springframework.context.annotation.AdviceMode;
+import org.springframework.context.annotation.AutoProxyRegistrar;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.Ordered;
 
+import java.lang.annotation.*;
+
 /**
+ * 开启事务管理功能
+ * <ul>
+ * <li>1. 通过{@link TransactionManagementConfigurationSelector}默认情况下向容器中注册
+ * {@link AutoProxyRegistrar}和{@link ProxyTransactionManagementConfiguration}</li>
+ * <li>2. {@link AutoProxyRegistrar} 是一个{@link ImportBeanDefinitionRegistrar},
+ * 继续向容器中注册{@link InfrastructureAdvisorAutoProxyCreator}</li>
+ * <li></li>
+ * <li></li>
+ * <li></li>
+ * </ul>
  * Enables Spring's annotation-driven transaction management capability, similar to
  * the support found in Spring's {@code <tx:*>} XML namespace. To be used on
  * {@link org.springframework.context.annotation.Configuration @Configuration}
@@ -74,7 +83,7 @@ import org.springframework.core.Ordered;
  *
  * &lt;/beans&gt;
  * </pre>
- *
+ * <p>
  * In both of the scenarios above, {@code @EnableTransactionManagement} and {@code
  * <tx:annotation-driven/>} are responsible for registering the necessary Spring
  * components that power annotation-driven transaction management, such as the
@@ -122,7 +131,7 @@ import org.springframework.core.Ordered;
  *         return txManager();
  *     }
  * }</pre>
- *
+ * <p>
  * This approach may be desirable simply because it is more explicit, or it may be
  * necessary in order to distinguish between two {@code PlatformTransactionManager} beans
  * present in the same container.  As the name suggests, the
@@ -143,11 +152,11 @@ import org.springframework.core.Ordered;
  *
  * @author Chris Beams
  * @author Juergen Hoeller
- * @since 3.1
  * @see TransactionManagementConfigurer
  * @see TransactionManagementConfigurationSelector
  * @see ProxyTransactionManagementConfiguration
  * @see org.springframework.transaction.aspectj.AspectJTransactionManagementConfiguration
+ * @since 3.1
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
