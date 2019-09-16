@@ -16,12 +16,11 @@
 
 package org.springframework.transaction.annotation;
 
+import org.springframework.aop.framework.CglibAopProxy;
+import org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator;
 import org.springframework.aop.framework.autoproxy.InfrastructureAdvisorAutoProxyCreator;
-import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
-import org.springframework.context.annotation.AdviceMode;
-import org.springframework.context.annotation.AutoProxyRegistrar;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.annotation.*;
 import org.springframework.core.Ordered;
 import org.springframework.transaction.interceptor.BeanFactoryTransactionAttributeSourceAdvisor;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
@@ -153,9 +152,9 @@ import java.lang.annotation.*;
  */
 
 /**
- * 开启事务管理功能
+ * 开启事务管理功能 {@link EnableTransactionManagement @EnableTransactionManagement}
  * <ul>
- * <li>1. 通过{@link TransactionManagementConfigurationSelector}默认情况下向容器中注册
+ * <li>1. 通过{@link TransactionManagementConfigurationSelector}(是一个{@link ImportSelector})默认情况下向容器中注册
  * {@link AutoProxyRegistrar}和{@link ProxyTransactionManagementConfiguration}</li>
  * <li>2. {@link AutoProxyRegistrar} 是一个{@link ImportBeanDefinitionRegistrar},
  * 继续向容器中注册{@link InfrastructureAdvisorAutoProxyCreator}</li>
@@ -163,7 +162,12 @@ import java.lang.annotation.*;
  * {@link BeanFactoryTransactionAttributeSourceAdvisor}:事务增强器，
  * {@link AnnotationTransactionAttributeSource}：解析{@link Transactional}注解，在bean实例化后判断是否可以使用事务增强器，
  * {@link TransactionInterceptor}：事务拦截器，执行目标方法的前后，进行拦截，开启/关闭事务</li>
- * <li>4. {@link InfrastructureAdvisorAutoProxyCreator} 是一个 {@link InstantiationAwareBeanPostProcessor}，</li>
+ * <li>4. {@link InfrastructureAdvisorAutoProxyCreator} 是一个 {@link BeanPostProcessor}，在bean实例创建完成之后，
+ * 通过执行{@link BeanPostProcessor#postProcessAfterInitialization}方法，
+ * （最终执行的是{@link AbstractAutoProxyCreator#postProcessAfterInitialization}）创建一个代理对象</li>
+ * <li>5. 在执行服务接口时，通过{@link CglibAopProxy.DynamicAdvisedInterceptor#intercept}方法进行拦截（cglib代理）,
+ * 最终执行{@link TransactionInterceptor}</li>
+ * <li></li>
  * <li></li>
  * </ul>
  */
