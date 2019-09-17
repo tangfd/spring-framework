@@ -16,7 +16,6 @@
 
 package org.springframework.transaction.annotation;
 
-import org.springframework.aop.framework.CglibAopProxy;
 import org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator;
 import org.springframework.aop.framework.autoproxy.InfrastructureAdvisorAutoProxyCreator;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -165,7 +164,7 @@ import java.lang.annotation.*;
  * <li>4. {@link InfrastructureAdvisorAutoProxyCreator} 是一个 {@link BeanPostProcessor}，在bean实例创建完成之后，
  * 通过执行{@link BeanPostProcessor#postProcessAfterInitialization}方法，
  * （最终执行的是{@link AbstractAutoProxyCreator#postProcessAfterInitialization}）创建一个代理对象</li>
- * <li>5. 在执行服务接口时，通过{@link CglibAopProxy.DynamicAdvisedInterceptor#intercept}方法进行拦截（cglib代理）,
+ * <li>5. 在执行服务接口时，通过{@link org.springframework.aop.framework.CglibAopProxy.DynamicAdvisedInterceptor#intercept}方法进行拦截（cglib代理）,
  * 最终执行{@link TransactionInterceptor}</li>
  * <li></li>
  * <li></li>
