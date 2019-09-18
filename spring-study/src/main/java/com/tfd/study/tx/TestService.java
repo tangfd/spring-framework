@@ -16,10 +16,15 @@ public class TestService {
 	@Resource
 	private JdbcTemplate jdbcTemplate;
 
+	@Resource
+	private IService iService;
+
 	@Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
 	public void save(String name) {
 		System.out.println("----tx-save---");
 		jdbcTemplate.execute("INSERT into t_test(name) VALUES('" + name + "');");
+		iService.save();
+		get(name);
 	}
 
 	@Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)

@@ -16,13 +16,17 @@
 
 package org.springframework.transaction.annotation;
 
+import org.springframework.aop.framework.ReflectiveMethodInvocation;
 import org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator;
 import org.springframework.aop.framework.autoproxy.InfrastructureAdvisorAutoProxyCreator;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.*;
 import org.springframework.core.Ordered;
 import org.springframework.transaction.interceptor.BeanFactoryTransactionAttributeSourceAdvisor;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.lang.annotation.*;
 
@@ -160,13 +164,30 @@ import java.lang.annotation.*;
  * <li>3. {@link ProxyTransactionManagementConfiguration}是一个配置类，向容器中注册了
  * {@link BeanFactoryTransactionAttributeSourceAdvisor}:事务增强器，
  * {@link AnnotationTransactionAttributeSource}：解析{@link Transactional}注解，在bean实例化后判断是否可以使用事务增强器，
- * {@link TransactionInterceptor}：事务拦截器，执行目标方法的前后，进行拦截，开启/关闭事务</li>
+ * {@link TransactionInterceptor}：事务拦截器，执行目标方法的前后，进行拦截，控制事务</li>
  * <li>4. {@link InfrastructureAdvisorAutoProxyCreator} 是一个 {@link BeanPostProcessor}，在bean实例创建完成之后，
  * 通过执行{@link BeanPostProcessor#postProcessAfterInitialization}方法，
  * （最终执行的是{@link AbstractAutoProxyCreator#postProcessAfterInitialization}）创建一个代理对象</li>
- * <li>5. 在执行服务接口时，通过{@link org.springframework.aop.framework.CglibAopProxy.DynamicAdvisedInterceptor#intercept}方法进行拦截（cglib代理）,
- * 最终执行{@link TransactionInterceptor}</li>
- * <li></li>
+ * <li>5. 在执行服务接口时，
+ * 通过{@link org.springframework.aop.framework.CglibAopProxy.DynamicAdvisedInterceptor#intercept}（cglib代理）
+ * 或者
+ * {@link org.springframework.aop.framework.JdkDynamicAopProxy#invoke}（jdk代理）
+ * 进行拦截，进入{@link ReflectiveMethodInvocation#proceed()}，
+ * 最终执行{@link TransactionInterceptor#invoke}方法（与aop执行流程相同）</li>
+ * <li>6. 执行{@link TransactionInterceptor#invoke}时调用父类的{@link TransactionAspectSupport#invokeWithinTransaction}方法，
+ * <ul>
+ * <li>1. 获取@Transactional 注解上设置事务属性，如果没有属性，则表示改方法没有事务</li>
+ * <li>2. 从容器中获取事务管理器{@link TransactionAspectSupport#determineTransactionManager}</li>
+ * <li>3. 如果方法需要事务，则创建事务,如果已经有了事务，此时从当前线程中获取已存在的事务和连接
+ * (如果涉及多数据源，需要在事务方法外切换数据源){@link AbstractPlatformTransactionManager#doGetTransaction}</li>
+ * <li>4. 初始状态时，将创建的事务，数据库连接保存到当前线程中
+ * {@link org.springframework.jdbc.datasource.DataSourceTransactionManager#doBegin}
+ * {@link TransactionSynchronizationManager#bindResource}</li>
+ * <li>5. 开启事务后，执行目标方法，
+ * 如果出现异常，则执行回滚操作{@link TransactionAspectSupport#completeTransactionAfterThrowing}，
+ * 正常则提交事务{@link TransactionAspectSupport#commitTransactionAfterReturning}</li>
+ * </ul>
+ * </li>
  * <li></li>
  * </ul>
  */
