@@ -294,6 +294,18 @@ public class NettyDataBuffer implements PooledDataBuffer {
 	}
 
 	@Override
+	public String toString(Charset charset) {
+		Assert.notNull(charset, "Charset must not be null");
+		return this.byteBuf.toString(charset);
+	}
+
+	@Override
+	public String toString(int index, int length, Charset charset) {
+		Assert.notNull(charset, "Charset must not be null");
+		return this.byteBuf.toString(index, length, charset);
+	}
+
+	@Override
 	public boolean isAllocated() {
 		return this.byteBuf.refCnt() > 0;
 	}
@@ -301,6 +313,12 @@ public class NettyDataBuffer implements PooledDataBuffer {
 	@Override
 	public PooledDataBuffer retain() {
 		return new NettyDataBuffer(this.byteBuf.retain(), this.dataBufferFactory);
+	}
+
+	@Override
+	public PooledDataBuffer touch(Object hint) {
+		this.byteBuf.touch(hint);
+		return this;
 	}
 
 	@Override

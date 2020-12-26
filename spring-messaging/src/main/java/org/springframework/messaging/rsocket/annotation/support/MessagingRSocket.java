@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,17 @@ package org.springframework.messaging.rsocket.annotation.support;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicReference;
 
-import io.rsocket.AbstractRSocket;
 import io.rsocket.ConnectionSetupPayload;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
+import io.rsocket.frame.FrameType;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
 
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.NettyDataBuffer;
 import org.springframework.lang.Nullable;
@@ -39,8 +37,10 @@ import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.ReactiveMessageHandler;
 import org.springframework.messaging.handler.DestinationPatternsMessageCondition;
 import org.springframework.messaging.handler.invocation.reactive.HandlerMethodReturnValueHandler;
+import org.springframework.messaging.rsocket.MetadataExtractor;
 import org.springframework.messaging.rsocket.PayloadUtils;
 import org.springframework.messaging.rsocket.RSocketRequester;
+import org.springframework.messaging.rsocket.RSocketStrategies;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.util.Assert;
@@ -57,12 +57,7 @@ import org.springframework.util.RouteMatcher;
  * @author Rossen Stoyanchev
  * @since 5.2
  */
-class MessagingRSocket extends AbstractRSocket {
-
-	static final MimeType COMPOSITE_METADATA = new MimeType("message", "x.rsocket.composite-metadata.v0");
-
-	static final MimeType ROUTING = new MimeType("message", "x.rsocket.routing.v0");
-
+class MessagingRSocket implements RSocket {
 
 	private final MimeType dataMimeType;
 
@@ -76,20 +71,20 @@ class MessagingRSocket extends AbstractRSocket {
 
 	private final RSocketRequester requester;
 
-	private final DataBufferFactory bufferFactory;
+	private final RSocketStrategies strategies;
 
 
 	MessagingRSocket(MimeType dataMimeType, MimeType metadataMimeType, MetadataExtractor metadataExtractor,
-			RSocketRequester requester, ReactiveMessageHandler messageHandler,
-			RouteMatcher routeMatcher, DataBufferFactory bufferFactory) {
+			RSocketRequester requester, ReactiveMessageHandler messageHandler, RouteMatcher routeMatcher,
+			RSocketStrategies strategies) {
 
 		Assert.notNull(dataMimeType, "'dataMimeType' is required");
 		Assert.notNull(metadataMimeType, "'metadataMimeType' is required");
-		Assert.notNull(metadataExtractor, "'metadataExtractor' is required");
-		Assert.notNull(requester, "'requester' is required");
-		Assert.notNull(messageHandler, "'messageHandler' is required");
-		Assert.notNull(routeMatcher, "'routeMatcher' is required");
-		Assert.notNull(bufferFactory, "'bufferFactory' is required");
+		Assert.notNull(metadataExtractor, "MetadataExtractor is required");
+		Assert.notNull(requester, "RSocketRequester is required");
+		Assert.notNull(messageHandler, "ReactiveMessageHandler is required");
+		Assert.notNull(routeMatcher, "RouteMatcher is required");
+		Assert.notNull(strategies, "RSocketStrategies is required");
 
 		this.dataMimeType = dataMimeType;
 		this.metadataMimeType = metadataMimeType;
@@ -97,13 +92,13 @@ class MessagingRSocket extends AbstractRSocket {
 		this.requester = requester;
 		this.messageHandler = messageHandler;
 		this.routeMatcher = routeMatcher;
-		this.bufferFactory = bufferFactory;
+		this.strategies = strategies;
 	}
 
 
 	/**
 	 * Wrap the {@link ConnectionSetupPayload} with a {@link Message} and
-	 * delegate to {@link #handle(Payload)} for handling.
+	 * delegate to {@link #handle(Payload, FrameType)} for handling.
 	 * @param payload the connection payload
 	 * @return completion handle for success or error
 	 */
@@ -111,23 +106,23 @@ class MessagingRSocket extends AbstractRSocket {
 		// frameDecoder does not apply to connectionSetupPayload
 		// so retain here since handle expects it..
 		payload.retain();
-		return handle(payload);
+		return handle(payload, FrameType.SETUP);
 	}
 
 
 	@Override
 	public Mono<Void> fireAndForget(Payload payload) {
-		return handle(payload);
+		return handle(payload, FrameType.REQUEST_FNF);
 	}
 
 	@Override
 	public Mono<Payload> requestResponse(Payload payload) {
-		return handleAndReply(payload, Flux.just(payload)).next();
+		return handleAndReply(payload, FrameType.REQUEST_RESPONSE, Flux.just(payload)).next();
 	}
 
 	@Override
 	public Flux<Payload> requestStream(Payload payload) {
-		return handleAndReply(payload, Flux.just(payload));
+		return handleAndReply(payload, FrameType.REQUEST_STREAM, Flux.just(payload));
 	}
 
 	@Override
@@ -135,19 +130,20 @@ class MessagingRSocket extends AbstractRSocket {
 		return Flux.from(payloads)
 				.switchOnFirst((signal, innerFlux) -> {
 					Payload firstPayload = signal.get();
-					return firstPayload == null ? innerFlux : handleAndReply(firstPayload, innerFlux);
+					return firstPayload == null ? innerFlux :
+							handleAndReply(firstPayload, FrameType.REQUEST_CHANNEL, innerFlux);
 				});
 	}
 
 	@Override
 	public Mono<Void> metadataPush(Payload payload) {
 		// Not very useful until createHeaders does more with metadata
-		return handle(payload);
+		return handle(payload, FrameType.METADATA_PUSH);
 	}
 
 
-	private Mono<Void> handle(Payload payload) {
-		MessageHeaders headers = createHeaders(payload, null);
+	private Mono<Void> handle(Payload payload, FrameType frameType) {
+		MessageHeaders headers = createHeaders(payload, frameType, null);
 		DataBuffer dataBuffer = retainDataAndReleasePayload(payload);
 		int refCount = refCount(dataBuffer);
 		Message<?> message = MessageBuilder.createMessage(dataBuffer, headers);
@@ -164,9 +160,10 @@ class MessagingRSocket extends AbstractRSocket {
 				((NettyDataBuffer) dataBuffer).getNativeBuffer().refCnt() : 1;
 	}
 
-	private Flux<Payload> handleAndReply(Payload firstPayload, Flux<Payload> payloads) {
-		MonoProcessor<Flux<Payload>> replyMono = MonoProcessor.create();
-		MessageHeaders headers = createHeaders(firstPayload, replyMono);
+	@SuppressWarnings("deprecation")
+	private Flux<Payload> handleAndReply(Payload firstPayload, FrameType frameType, Flux<Payload> payloads) {
+		AtomicReference<Flux<Payload>> responseRef = new AtomicReference<>();
+		MessageHeaders headers = createHeaders(firstPayload, frameType, responseRef);
 
 		AtomicBoolean read = new AtomicBoolean();
 		Flux<DataBuffer> buffers = payloads.map(this::retainDataAndReleasePayload).doOnSubscribe(s -> read.set(true));
@@ -176,23 +173,25 @@ class MessagingRSocket extends AbstractRSocket {
 				.doFinally(s -> {
 					// Subscription should have happened by now due to ChannelSendOperator
 					if (!read.get()) {
-						buffers.subscribe(DataBufferUtils::release);
+						firstPayload.release();
 					}
 				})
-				.thenMany(Flux.defer(() -> replyMono.isTerminated() ?
-						replyMono.flatMapMany(Function.identity()) :
-						Mono.error(new IllegalStateException("Something went wrong: reply Mono not set"))));
+				.thenMany(Flux.defer(() -> responseRef.get() != null ?
+						responseRef.get() : Mono.error(new IllegalStateException("Expected response"))));
 	}
 
 	private DataBuffer retainDataAndReleasePayload(Payload payload) {
-		return PayloadUtils.retainDataAndReleasePayload(payload, this.bufferFactory);
+		return PayloadUtils.retainDataAndReleasePayload(payload, this.strategies.dataBufferFactory());
 	}
 
-	private MessageHeaders createHeaders(Payload payload, @Nullable MonoProcessor<?> replyMono) {
+	private MessageHeaders createHeaders(
+			Payload payload, FrameType frameType, @Nullable AtomicReference<Flux<Payload>> responseRef) {
+
 		MessageHeaderAccessor headers = new MessageHeaderAccessor();
 		headers.setLeaveMutable(true);
 
 		Map<String, Object> metadataValues = this.metadataExtractor.extract(payload, this.metadataMimeType);
+
 		metadataValues.putIfAbsent(MetadataExtractor.ROUTE_KEY, "");
 		for (Map.Entry<String, Object> entry : metadataValues.entrySet()) {
 			if (entry.getKey().equals(MetadataExtractor.ROUTE_KEY)) {
@@ -205,11 +204,13 @@ class MessagingRSocket extends AbstractRSocket {
 		}
 
 		headers.setContentType(this.dataMimeType);
+		headers.setHeader(RSocketFrameTypeMessageCondition.FRAME_TYPE_HEADER, frameType);
 		headers.setHeader(RSocketRequesterMethodArgumentResolver.RSOCKET_REQUESTER_HEADER, this.requester);
-		if (replyMono != null) {
-			headers.setHeader(RSocketPayloadReturnValueHandler.RESPONSE_HEADER, replyMono);
+		if (responseRef != null) {
+			headers.setHeader(RSocketPayloadReturnValueHandler.RESPONSE_HEADER, responseRef);
 		}
-		headers.setHeader(HandlerMethodReturnValueHandler.DATA_BUFFER_FACTORY_HEADER, this.bufferFactory);
+		headers.setHeader(HandlerMethodReturnValueHandler.DATA_BUFFER_FACTORY_HEADER,
+				this.strategies.dataBufferFactory());
 
 		return headers.getMessageHeaders();
 	}

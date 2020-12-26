@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.springframework.jdbc.core;
 
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -37,9 +37,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  */
 public class BeanPropertyRowMapperTests extends AbstractRowMapperTests {
 
-
 	@Test
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public void testOverridingDifferentClassDefinedForMapping() {
 		BeanPropertyRowMapper mapper = new BeanPropertyRowMapper(Person.class);
 		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() ->

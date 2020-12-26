@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ package org.springframework.core.annotation;
 
 import java.lang.reflect.Method;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.core.MethodParameter;
 
@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Juergen Hoeller
  * @since 5.0
  */
-public class SynthesizingMethodParameterTests {
+class SynthesizingMethodParameterTests {
 
 	private Method method;
 
@@ -41,8 +41,8 @@ public class SynthesizingMethodParameterTests {
 	private SynthesizingMethodParameter intReturnType;
 
 
-	@Before
-	public void setUp() throws NoSuchMethodException {
+	@BeforeEach
+	void setUp() throws NoSuchMethodException {
 		method = getClass().getMethod("method", String.class, Long.TYPE);
 		stringParameter = new SynthesizingMethodParameter(method, 0);
 		longParameter = new SynthesizingMethodParameter(method, 1);
@@ -51,7 +51,7 @@ public class SynthesizingMethodParameterTests {
 
 
 	@Test
-	public void testEquals() throws NoSuchMethodException {
+	void equals() throws NoSuchMethodException {
 		assertThat(stringParameter).isEqualTo(stringParameter);
 		assertThat(longParameter).isEqualTo(longParameter);
 		assertThat(intReturnType).isEqualTo(intReturnType);
@@ -78,7 +78,7 @@ public class SynthesizingMethodParameterTests {
 	}
 
 	@Test
-	public void testHashCode() throws NoSuchMethodException {
+	void testHashCode() throws NoSuchMethodException {
 		assertThat(stringParameter.hashCode()).isEqualTo(stringParameter.hashCode());
 		assertThat(longParameter.hashCode()).isEqualTo(longParameter.hashCode());
 		assertThat(intReturnType.hashCode()).isEqualTo(intReturnType.hashCode());
@@ -86,11 +86,11 @@ public class SynthesizingMethodParameterTests {
 		Method method = getClass().getMethod("method", String.class, Long.TYPE);
 		SynthesizingMethodParameter methodParameter = new SynthesizingMethodParameter(method, 0);
 		assertThat(methodParameter.hashCode()).isEqualTo(stringParameter.hashCode());
-		assertThat(methodParameter.hashCode()).isNotEqualTo((long) longParameter.hashCode());
+		assertThat(methodParameter.hashCode()).isNotEqualTo(longParameter.hashCode());
 	}
 
 	@Test
-	public void testFactoryMethods() {
+	void factoryMethods() {
 		assertThat(SynthesizingMethodParameter.forExecutable(method, 0)).isEqualTo(stringParameter);
 		assertThat(SynthesizingMethodParameter.forExecutable(method, 1)).isEqualTo(longParameter);
 
@@ -99,7 +99,7 @@ public class SynthesizingMethodParameterTests {
 	}
 
 	@Test
-	public void testIndexValidation() {
+	void indexValidation() {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new SynthesizingMethodParameter(method, 2));
 	}

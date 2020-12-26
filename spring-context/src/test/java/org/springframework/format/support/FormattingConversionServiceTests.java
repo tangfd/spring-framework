@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,9 @@ import java.util.Properties;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.ConfigurablePropertyAccessor;
@@ -68,14 +68,14 @@ public class FormattingConversionServiceTests {
 	private FormattingConversionService formattingService;
 
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		formattingService = new FormattingConversionService();
 		DefaultConversionService.addDefaultConverters(formattingService);
 		LocaleContextHolder.setLocale(Locale.US);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		LocaleContextHolder.setLocale(null);
 	}
@@ -87,7 +87,7 @@ public class FormattingConversionServiceTests {
 		String formatted = formattingService.convert(3, String.class);
 		assertThat(formatted).isEqualTo("3");
 		Integer i = formattingService.convert("3", Integer.class);
-		assertThat(i).isEqualTo(new Integer(3));
+		assertThat(i).isEqualTo(3);
 	}
 
 	@Test

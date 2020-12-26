@@ -20,8 +20,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.SubscribableChannel;
@@ -55,7 +55,7 @@ public class WebMvcStompWebSocketEndpointRegistrationTests {
 	private TaskScheduler scheduler;
 
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		this.handler = new SubProtocolWebSocketHandler(mock(MessageChannel.class), mock(SubscribableChannel.class));
 		this.scheduler = mock(TaskScheduler.class);
@@ -133,6 +133,32 @@ public class WebMvcStompWebSocketEndpointRegistrationTests {
 		sockJsService = (DefaultSockJsService)requestHandler.getSockJsService();
 		assertThat(sockJsService.getAllowedOrigins().contains(origin)).isTrue();
 		assertThat(sockJsService.shouldSuppressCors()).isFalse();
+	}
+
+	@Test
+	public void allowedOriginPatterns() {
+		WebMvcStompWebSocketEndpointRegistration registration =
+				new WebMvcStompWebSocketEndpointRegistration(new String[] {"/foo"}, this.handler, this.scheduler);
+
+		String origin = "https://*.mydomain.com";
+		registration.setAllowedOriginPatterns(origin).withSockJS();
+
+		MultiValueMap<HttpRequestHandler, String> mappings = registration.getMappings();
+		assertThat(mappings.size()).isEqualTo(1);
+		SockJsHttpRequestHandler requestHandler = (SockJsHttpRequestHandler)mappings.entrySet().iterator().next().getKey();
+		assertThat(requestHandler.getSockJsService()).isNotNull();
+		DefaultSockJsService sockJsService = (DefaultSockJsService)requestHandler.getSockJsService();
+		assertThat(sockJsService.getAllowedOriginPatterns().contains(origin)).isTrue();
+
+		registration =
+				new WebMvcStompWebSocketEndpointRegistration(new String[] {"/foo"}, this.handler, this.scheduler);
+		registration.withSockJS().setAllowedOriginPatterns(origin);
+		mappings = registration.getMappings();
+		assertThat(mappings.size()).isEqualTo(1);
+		requestHandler = (SockJsHttpRequestHandler)mappings.entrySet().iterator().next().getKey();
+		assertThat(requestHandler.getSockJsService()).isNotNull();
+		sockJsService = (DefaultSockJsService)requestHandler.getSockJsService();
+		assertThat(sockJsService.getAllowedOriginPatterns().contains(origin)).isTrue();
 	}
 
 	@Test  // SPR-12283

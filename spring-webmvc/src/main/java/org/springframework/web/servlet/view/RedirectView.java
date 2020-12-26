@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,13 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.net.URLEncoder;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -34,6 +34,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
@@ -55,7 +56,7 @@ import org.springframework.web.util.WebUtils;
  * but this behavior can be changed by overriding the
  * {@link #isEligibleProperty(String, Object)} method.
  *
- * <p>A URL for this view is supposed to be a HTTP redirect URL, i.e.
+ * <p>A URL for this view is supposed to be an HTTP redirect URL, i.e.
  * suitable for HttpServletResponse's {@code sendRedirect} method, which
  * is what actually does the redirect if the HTTP 1.0 flag is on, or via sending
  * back an HTTP 303 code - if the HTTP 1.0 compatibility flag is off.
@@ -385,7 +386,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 			if (value == null) {
 				throw new IllegalArgumentException("Model has no value for key '" + name + "'");
 			}
-			result.append(targetUrl.substring(endLastMatch, matcher.start()));
+			result.append(targetUrl, endLastMatch, matcher.start());
 			result.append(UriUtils.encodePathSegment(value.toString(), encodingScheme));
 			endLastMatch = matcher.end();
 		}
@@ -397,7 +398,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 	private Map<String, String> getCurrentRequestUriVariables(HttpServletRequest request) {
 		String name = HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE;
 		Map<String, String> uriVars = (Map<String, String>) request.getAttribute(name);
-		return (uriVars != null) ? uriVars : Collections.<String, String> emptyMap();
+		return (uriVars != null) ? uriVars : Collections.emptyMap();
 	}
 
 	/**
@@ -455,12 +456,12 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 		boolean first = (targetUrl.toString().indexOf('?') < 0);
 		for (Map.Entry<String, Object> entry : queryProperties(model).entrySet()) {
 			Object rawValue = entry.getValue();
-			Collection<Object> values;
+			Collection<?> values;
 			if (rawValue != null && rawValue.getClass().isArray()) {
-				values = Arrays.asList(ObjectUtils.toObjectArray(rawValue));
+				values = CollectionUtils.arrayToList(rawValue);
 			}
 			else if (rawValue instanceof Collection) {
-				values = ((Collection<Object>) rawValue);
+				values = ((Collection<?>) rawValue);
 			}
 			else {
 				values = Collections.singleton(rawValue);

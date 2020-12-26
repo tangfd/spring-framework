@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
+
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
@@ -667,11 +668,14 @@ public class MockHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public String getServerName() {
-		String host = getHeader(HttpHeaders.HOST);
+		String rawHostHeader = getHeader(HttpHeaders.HOST);
+		String host = rawHostHeader;
 		if (host != null) {
 			host = host.trim();
 			if (host.startsWith("[")) {
-				host = host.substring(1, host.indexOf(']'));
+				int indexOfClosingBracket = host.indexOf(']');
+				Assert.state(indexOfClosingBracket > -1, () -> "Invalid Host header: " + rawHostHeader);
+				host = host.substring(0, indexOfClosingBracket + 1);
 			}
 			else if (host.contains(":")) {
 				host = host.substring(0, host.indexOf(':'));
@@ -689,12 +693,15 @@ public class MockHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public int getServerPort() {
-		String host = getHeader(HttpHeaders.HOST);
+		String rawHostHeader = getHeader(HttpHeaders.HOST);
+		String host = rawHostHeader;
 		if (host != null) {
 			host = host.trim();
 			int idx;
 			if (host.startsWith("[")) {
-				idx = host.indexOf(':', host.indexOf(']'));
+				int indexOfClosingBracket = host.indexOf(']');
+				Assert.state(indexOfClosingBracket > -1, () -> "Invalid Host header: " + rawHostHeader);
+				idx = host.indexOf(':', indexOfClosingBracket);
 			}
 			else {
 				idx = host.indexOf(':');
@@ -1038,7 +1045,7 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	}
 
 	private void doAddHeaderValue(String name, @Nullable Object value, boolean replace) {
-		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
+		HeaderValueHolder header = this.headers.get(name);
 		Assert.notNull(value, "Header value must not be null");
 		if (header == null || replace) {
 			header = new HeaderValueHolder();
@@ -1078,7 +1085,7 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	 */
 	@Override
 	public long getDateHeader(String name) {
-		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
+		HeaderValueHolder header = this.headers.get(name);
 		Object value = (header != null ? header.getValue() : null);
 		if (value instanceof Date) {
 			return ((Date) value).getTime();
@@ -1115,13 +1122,13 @@ public class MockHttpServletRequest implements HttpServletRequest {
 	@Override
 	@Nullable
 	public String getHeader(String name) {
-		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
+		HeaderValueHolder header = this.headers.get(name);
 		return (header != null ? header.getStringValue() : null);
 	}
 
 	@Override
 	public Enumeration<String> getHeaders(String name) {
-		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
+		HeaderValueHolder header = this.headers.get(name);
 		return Collections.enumeration(header != null ? header.getStringValues() : new LinkedList<>());
 	}
 
@@ -1132,7 +1139,7 @@ public class MockHttpServletRequest implements HttpServletRequest {
 
 	@Override
 	public int getIntHeader(String name) {
-		HeaderValueHolder header = HeaderValueHolder.getByName(this.headers, name);
+		HeaderValueHolder header = this.headers.get(name);
 		Object value = (header != null ? header.getValue() : null);
 		if (value instanceof Number) {
 			return ((Number) value).intValue();

@@ -18,7 +18,7 @@ package org.springframework.test.web.servlet.samples.standalone;
 
 import javax.validation.constraints.NotNull;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,10 +38,10 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
  * @author Rossen Stoyanchev
  * @author Sam Brannen
  */
-public class ResponseBodyTests {
+class ResponseBodyTests {
 
 	@Test
-	public void json() throws Exception {
+	void json() throws Exception {
 		standaloneSetup(new PersonController()).build()
 				.perform(get("/person/Lee").accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
@@ -60,7 +60,7 @@ public class ResponseBodyTests {
 	private static class PersonController {
 
 		@GetMapping("/person/{name}")
-		public Person get(@PathVariable String name) {
+		Person get(@PathVariable String name) {
 			Person person = new Person(name);
 			person.setAge(42);
 			return person;
