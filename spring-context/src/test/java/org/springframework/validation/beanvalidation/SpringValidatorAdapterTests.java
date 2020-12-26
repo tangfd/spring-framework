@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,20 @@
 package org.springframework.validation.beanvalidation;
 
 import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+
 import javax.validation.Constraint;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
@@ -41,19 +43,17 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.context.support.StaticMessageSource;
+import org.springframework.core.testfixture.io.SerializationTestUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 
-import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
-import static java.lang.annotation.ElementType.TYPE;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -69,7 +69,7 @@ public class SpringValidatorAdapterTests {
 	private final StaticMessageSource messageSource = new StaticMessageSource();
 
 
-	@Before
+	@BeforeEach
 	public void setupSpringValidatorAdapter() {
 		messageSource.addMessage("Size", Locale.ENGLISH, "Size of {0} must be between {2} and {1}");
 		messageSource.addMessage("Same", Locale.ENGLISH, "{2} must be same value as {1}");
@@ -85,7 +85,7 @@ public class SpringValidatorAdapterTests {
 	}
 
 	@Test  // SPR-13406
-	public void testNoStringArgumentValue() {
+	public void testNoStringArgumentValue() throws Exception {
 		TestBean testBean = new TestBean();
 		testBean.setPassword("pass");
 		testBean.setConfirmPassword("pass");
@@ -100,10 +100,11 @@ public class SpringValidatorAdapterTests {
 		assertThat(messageSource.getMessage(error, Locale.ENGLISH)).isEqualTo("Size of Password must be between 8 and 128");
 		assertThat(error.contains(ConstraintViolation.class)).isTrue();
 		assertThat(error.unwrap(ConstraintViolation.class).getPropertyPath().toString()).isEqualTo("password");
+		assertThat(SerializationTestUtils.serializeAndDeserialize(error.toString())).isEqualTo(error.toString());
 	}
 
 	@Test  // SPR-13406
-	public void testApplyMessageSourceResolvableToStringArgumentValueWithResolvedLogicalFieldName() {
+	public void testApplyMessageSourceResolvableToStringArgumentValueWithResolvedLogicalFieldName() throws Exception {
 		TestBean testBean = new TestBean();
 		testBean.setPassword("password");
 		testBean.setConfirmPassword("PASSWORD");
@@ -118,6 +119,7 @@ public class SpringValidatorAdapterTests {
 		assertThat(messageSource.getMessage(error, Locale.ENGLISH)).isEqualTo("Password must be same value as Password(Confirm)");
 		assertThat(error.contains(ConstraintViolation.class)).isTrue();
 		assertThat(error.unwrap(ConstraintViolation.class).getPropertyPath().toString()).isEqualTo("password");
+		assertThat(SerializationTestUtils.serializeAndDeserialize(error.toString())).isEqualTo(error.toString());
 	}
 
 	@Test  // SPR-13406
@@ -278,8 +280,8 @@ public class SpringValidatorAdapterTests {
 
 	@Documented
 	@Constraint(validatedBy = {SameValidator.class})
-	@Target({TYPE, ANNOTATION_TYPE})
-	@Retention(RUNTIME)
+	@Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
+	@Retention(RetentionPolicy.RUNTIME)
 	@Repeatable(SameGroup.class)
 	@interface Same {
 
@@ -293,8 +295,8 @@ public class SpringValidatorAdapterTests {
 
 		String comparingField();
 
-		@Target({TYPE, ANNOTATION_TYPE})
-		@Retention(RUNTIME)
+		@Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
+		@Retention(RetentionPolicy.RUNTIME)
 		@Documented
 		@interface List {
 			Same[] value();
@@ -304,8 +306,8 @@ public class SpringValidatorAdapterTests {
 
 	@Documented
 	@Inherited
-	@Retention(RUNTIME)
-	@Target({TYPE, ANNOTATION_TYPE})
+	@Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
+	@Retention(RetentionPolicy.RUNTIME)
 	@interface SameGroup {
 
 		Same[] value();
@@ -320,12 +322,14 @@ public class SpringValidatorAdapterTests {
 
 		private String message;
 
+		@Override
 		public void initialize(Same constraintAnnotation) {
 			field = constraintAnnotation.field();
 			comparingField = constraintAnnotation.comparingField();
 			message = constraintAnnotation.message();
 		}
 
+		@Override
 		public boolean isValid(Object value, ConstraintValidatorContext context) {
 			BeanWrapper beanWrapper = new BeanWrapperImpl(value);
 			Object fieldValue = beanWrapper.getPropertyValue(field);
@@ -356,7 +360,7 @@ public class SpringValidatorAdapterTests {
 		private Set<Child> childSet = new LinkedHashSet<>();
 
 		@Valid
-		private List<Child> childList = new LinkedList<>();
+		private List<Child> childList = new ArrayList<>();
 
 		public Integer getId() {
 			return id;
@@ -441,7 +445,7 @@ public class SpringValidatorAdapterTests {
 
 
 	@Constraint(validatedBy = AnythingValidator.class)
-	@Retention(RUNTIME)
+	@Retention(RetentionPolicy.RUNTIME)
 	public @interface AnythingValid {
 
 		String message() default "{AnythingValid.message}";
@@ -462,14 +466,14 @@ public class SpringValidatorAdapterTests {
 
 		@Override
 		public boolean isValid(Object value, ConstraintValidatorContext context) {
-			List<Field> fieldsErros = new ArrayList<>();
-			Arrays.asList(value.getClass().getDeclaredFields()).forEach(f -> {
-				f.setAccessible(true);
+			List<Field> fieldsErrors = new ArrayList<>();
+			Arrays.asList(value.getClass().getDeclaredFields()).forEach(field -> {
+				field.setAccessible(true);
 				try {
-					if (!f.getName().equals(ID) && f.get(value) == null) {
-						fieldsErros.add(f);
+					if (!field.getName().equals(ID) && field.get(value) == null) {
+						fieldsErrors.add(field);
 						context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
-								.addPropertyNode(f.getName())
+								.addPropertyNode(field.getName())
 								.addConstraintViolation();
 					}
 				}
@@ -477,7 +481,7 @@ public class SpringValidatorAdapterTests {
 					throw new IllegalStateException(ex);
 				}
 			});
-			return fieldsErros.isEmpty();
+			return fieldsErrors.isEmpty();
 		}
 	}
 

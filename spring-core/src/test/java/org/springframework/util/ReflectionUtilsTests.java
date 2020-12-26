@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,12 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.rmi.ConnectException;
 import java.rmi.RemoteException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
-import org.springframework.tests.Assume;
-import org.springframework.tests.TestGroup;
 import org.springframework.tests.sample.objects.TestObject;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,10 +38,10 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Sam Brannen
  * @author Arjen Poutsma
  */
-public class ReflectionUtilsTests {
+class ReflectionUtilsTests {
 
 	@Test
-	public void findField() {
+	void findField() {
 		Field field = ReflectionUtils.findField(TestObjectSubclassWithPublicField.class, "publicField", String.class);
 		assertThat(field).isNotNull();
 		assertThat(field.getName()).isEqualTo("publicField");
@@ -64,7 +62,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void setField() {
+	void setField() {
 		TestObjectSubclassWithNewField testBean = new TestObjectSubclassWithNewField();
 		Field field = ReflectionUtils.findField(TestObjectSubclassWithNewField.class, "name", String.class);
 
@@ -79,7 +77,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void invokeMethod() throws Exception {
+	void invokeMethod() throws Exception {
 		String rob = "Rob Harrop";
 
 		TestObject bean = new TestObject();
@@ -97,7 +95,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void declaresException() throws Exception {
+	void declaresException() throws Exception {
 		Method remoteExMethod = A.class.getDeclaredMethod("foo", Integer.class);
 		assertThat(ReflectionUtils.declaresException(remoteExMethod, RemoteException.class)).isTrue();
 		assertThat(ReflectionUtils.declaresException(remoteExMethod, ConnectException.class)).isTrue();
@@ -112,7 +110,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void copySrcToDestinationOfIncorrectClass() {
+	void copySrcToDestinationOfIncorrectClass() {
 		TestObject src = new TestObject();
 		String dest = new String();
 		assertThatIllegalArgumentException().isThrownBy(() ->
@@ -120,7 +118,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void rejectsNullSrc() {
+	void rejectsNullSrc() {
 		TestObject src = null;
 		String dest = new String();
 		assertThatIllegalArgumentException().isThrownBy(() ->
@@ -128,7 +126,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void rejectsNullDest() {
+	void rejectsNullDest() {
 		TestObject src = new TestObject();
 		String dest = null;
 		assertThatIllegalArgumentException().isThrownBy(() ->
@@ -136,14 +134,14 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void validCopy() {
+	void validCopy() {
 		TestObject src = new TestObject();
 		TestObject dest = new TestObject();
 		testValidCopy(src, dest);
 	}
 
 	@Test
-	public void validCopyOnSubTypeWithNewField() {
+	void validCopyOnSubTypeWithNewField() {
 		TestObjectSubclassWithNewField src = new TestObjectSubclassWithNewField();
 		TestObjectSubclassWithNewField dest = new TestObjectSubclassWithNewField();
 		src.magic = 11;
@@ -157,7 +155,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void validCopyToSubType() {
+	void validCopyToSubType() {
 		TestObject src = new TestObject();
 		TestObjectSubclassWithNewField dest = new TestObjectSubclassWithNewField();
 		dest.magic = 11;
@@ -167,7 +165,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void validCopyToSubTypeWithFinalField() {
+	void validCopyToSubTypeWithFinalField() {
 		TestObjectSubclassWithFinalField src = new TestObjectSubclassWithFinalField();
 		TestObjectSubclassWithFinalField dest = new TestObjectSubclassWithFinalField();
 		// Check that this doesn't fail due to attempt to assign final
@@ -186,14 +184,9 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void doWithProtectedMethods() {
+	void doWithProtectedMethods() {
 		ListSavingMethodCallback mc = new ListSavingMethodCallback();
-		ReflectionUtils.doWithMethods(TestObject.class, mc, new ReflectionUtils.MethodFilter() {
-			@Override
-			public boolean matches(Method m) {
-				return Modifier.isProtected(m.getModifiers());
-			}
-		});
+		ReflectionUtils.doWithMethods(TestObject.class, mc, method -> Modifier.isProtected(method.getModifiers()));
 		assertThat(mc.getMethodNames().isEmpty()).isFalse();
 		assertThat(mc.getMethodNames().contains("clone")).as("Must find protected method on Object").isTrue();
 		assertThat(mc.getMethodNames().contains("finalize")).as("Must find protected method on Object").isTrue();
@@ -202,7 +195,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void duplicatesFound() {
+	void duplicatesFound() {
 		ListSavingMethodCallback mc = new ListSavingMethodCallback();
 		ReflectionUtils.doWithMethods(TestObjectSubclass.class, mc);
 		int absquatulateCount = 0;
@@ -215,20 +208,20 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void findMethod() throws Exception {
+	void findMethod() throws Exception {
 		assertThat(ReflectionUtils.findMethod(B.class, "bar", String.class)).isNotNull();
 		assertThat(ReflectionUtils.findMethod(B.class, "foo", Integer.class)).isNotNull();
 		assertThat(ReflectionUtils.findMethod(B.class, "getClass")).isNotNull();
 	}
 
-	@Ignore("[SPR-8644] findMethod() does not currently support var-args")
+	@Disabled("[SPR-8644] findMethod() does not currently support var-args")
 	@Test
-	public void findMethodWithVarArgs() throws Exception {
+	void findMethodWithVarArgs() throws Exception {
 		assertThat(ReflectionUtils.findMethod(B.class, "add", int.class, int.class, int.class)).isNotNull();
 	}
 
 	@Test
-	public void isCglibRenamedMethod() throws SecurityException, NoSuchMethodException {
+	void isCglibRenamedMethod() throws SecurityException, NoSuchMethodException {
 		@SuppressWarnings("unused")
 		class C {
 			public void CGLIB$m1$123() {
@@ -266,7 +259,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void getAllDeclaredMethods() throws Exception {
+	void getAllDeclaredMethods() throws Exception {
 		class Foo {
 			@Override
 			public String toString() {
@@ -283,7 +276,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void getUniqueDeclaredMethods() throws Exception {
+	void getUniqueDeclaredMethods() throws Exception {
 		class Foo {
 			@Override
 			public String toString() {
@@ -300,7 +293,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void getUniqueDeclaredMethods_withCovariantReturnType() throws Exception {
+	void getUniqueDeclaredMethods_withCovariantReturnType() throws Exception {
 		class Parent {
 			@SuppressWarnings("unused")
 			public Number m1() {
@@ -326,44 +319,7 @@ public class ReflectionUtilsTests {
 	}
 
 	@Test
-	public void getUniqueDeclaredMethods_isFastEnough() {
-		Assume.group(TestGroup.PERFORMANCE);
-
-		@SuppressWarnings("unused")
-		class C {
-			void m00() { } void m01() { } void m02() { } void m03() { } void m04() { }
-			void m05() { } void m06() { } void m07() { } void m08() { } void m09() { }
-			void m10() { } void m11() { } void m12() { } void m13() { } void m14() { }
-			void m15() { } void m16() { } void m17() { } void m18() { } void m19() { }
-			void m20() { } void m21() { } void m22() { } void m23() { } void m24() { }
-			void m25() { } void m26() { } void m27() { } void m28() { } void m29() { }
-			void m30() { } void m31() { } void m32() { } void m33() { } void m34() { }
-			void m35() { } void m36() { } void m37() { } void m38() { } void m39() { }
-			void m40() { } void m41() { } void m42() { } void m43() { } void m44() { }
-			void m45() { } void m46() { } void m47() { } void m48() { } void m49() { }
-			void m50() { } void m51() { } void m52() { } void m53() { } void m54() { }
-			void m55() { } void m56() { } void m57() { } void m58() { } void m59() { }
-			void m60() { } void m61() { } void m62() { } void m63() { } void m64() { }
-			void m65() { } void m66() { } void m67() { } void m68() { } void m69() { }
-			void m70() { } void m71() { } void m72() { } void m73() { } void m74() { }
-			void m75() { } void m76() { } void m77() { } void m78() { } void m79() { }
-			void m80() { } void m81() { } void m82() { } void m83() { } void m84() { }
-			void m85() { } void m86() { } void m87() { } void m88() { } void m89() { }
-			void m90() { } void m91() { } void m92() { } void m93() { } void m94() { }
-			void m95() { } void m96() { } void m97() { } void m98() { } void m99() { }
-		}
-
-		StopWatch sw = new StopWatch();
-		sw.start();
-		Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(C.class);
-		sw.stop();
-		long totalMs = sw.getTotalTimeMillis();
-		assertThat(methods.length).isGreaterThan(100);
-		assertThat(totalMs).isLessThan(10L);
-	}
-
-	@Test
-	public void getDecalredMethodsReturnsCopy() {
+	void getDeclaredMethodsReturnsCopy() {
 		Method[] m1 = ReflectionUtils.getDeclaredMethods(A.class);
 		Method[] m2 = ReflectionUtils.getDeclaredMethods(A.class);
 		assertThat(m1). isNotSameAs(m2);
@@ -371,9 +327,9 @@ public class ReflectionUtilsTests {
 
 	private static class ListSavingMethodCallback implements ReflectionUtils.MethodCallback {
 
-		private List<String> methodNames = new LinkedList<>();
+		private List<String> methodNames = new ArrayList<>();
 
-		private List<Method> methods = new LinkedList<>();
+		private List<Method> methods = new ArrayList<>();
 
 		@Override
 		public void doWith(Method m) throws IllegalArgumentException, IllegalAccessException {

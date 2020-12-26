@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.expression.EvaluationContext;
@@ -89,8 +89,8 @@ public class ReflectionHelperTests extends AbstractExpressionTests {
 		assertThat(tv1).isNotEqualTo(tv3);
 		assertThat(tv2).isNotEqualTo(tv3);
 		assertThat(tv2.hashCode()).isEqualTo(tv1.hashCode());
-		assertThat(tv3.hashCode()).isNotEqualTo((long) tv1.hashCode());
-		assertThat(tv3.hashCode()).isNotEqualTo((long) tv2.hashCode());
+		assertThat(tv3.hashCode()).isNotEqualTo(tv1.hashCode());
+		assertThat(tv3.hashCode()).isNotEqualTo(tv2.hashCode());
 	}
 
 	@Test
@@ -345,8 +345,7 @@ public class ReflectionHelperTests extends AbstractExpressionTests {
 		assertThat(property.read(ctx, tester, "property").getValue()).isEqualTo("hello");
 		// cached accessor used
 		assertThat(property.read(ctx, tester, "property").getValue()).isEqualTo("hello");
-		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() ->
-				property.getSpecificTargetClasses());
+		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(property::getSpecificTargetClasses);
 		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() ->
 				property.write(ctx, tester, "property", null));
 
@@ -360,8 +359,7 @@ public class ReflectionHelperTests extends AbstractExpressionTests {
 		assertThat(field.read(ctx, tester, "field").getValue()).isEqualTo(3);
 		// cached accessor used
 		assertThat(field.read(ctx, tester, "field").getValue()).isEqualTo(3);
-		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() ->
-				field.getSpecificTargetClasses());
+		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(field::getSpecificTargetClasses);
 		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() ->
 				field.write(ctx, tester, "field", null));
 	}

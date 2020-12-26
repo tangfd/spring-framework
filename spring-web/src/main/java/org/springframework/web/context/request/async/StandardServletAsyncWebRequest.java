@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
@@ -47,7 +48,7 @@ public class StandardServletAsyncWebRequest extends ServletWebRequest implements
 
 	private AsyncContext asyncContext;
 
-	private AtomicBoolean asyncCompleted = new AtomicBoolean(false);
+	private AtomicBoolean asyncCompleted = new AtomicBoolean();
 
 	private final List<Runnable> timeoutHandlers = new ArrayList<>();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,18 @@
 
 package org.springframework.http;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
+import org.springframework.core.testfixture.io.SerializationTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -35,6 +37,7 @@ import static org.assertj.core.api.Assertions.within;
 /**
  * @author Arjen Poutsma
  * @author Juergen Hoeller
+ * @author Sam Brannen
  */
 public class MediaTypeTests {
 
@@ -157,6 +160,13 @@ public class MediaTypeTests {
 		mediaTypes = MediaType.parseMediaTypes("");
 		assertThat(mediaTypes).as("No media types returned").isNotNull();
 		assertThat(mediaTypes.size()).as("Invalid amount of media types").isEqualTo(0);
+	}
+
+	@Test  // gh-23241
+	public void parseMediaTypesWithTrailingComma() {
+		List<MediaType> mediaTypes = MediaType.parseMediaTypes("text/plain, text/html, ");
+		assertThat(mediaTypes).as("No media types returned").isNotNull();
+		assertThat(mediaTypes.size()).as("Incorrect number of media types").isEqualTo(2);
 	}
 
 	@Test
@@ -450,6 +460,14 @@ public class MediaTypeTests {
 		assertThat(MediaType.TEXT_PLAIN.isConcrete()).as("text/plain not concrete").isTrue();
 		assertThat(MediaType.ALL.isConcrete()).as("*/* concrete").isFalse();
 		assertThat(new MediaType("text", "*").isConcrete()).as("text/* concrete").isFalse();
+	}
+
+	@Test  // gh-26127
+	void serialize() throws Exception {
+		MediaType original = new MediaType("text", "plain", StandardCharsets.UTF_8);
+		MediaType deserialized = SerializationTestUtils.serializeAndDeserialize(original);
+		assertThat(deserialized).isEqualTo(original);
+		assertThat(original).isEqualTo(deserialized);
 	}
 
 }

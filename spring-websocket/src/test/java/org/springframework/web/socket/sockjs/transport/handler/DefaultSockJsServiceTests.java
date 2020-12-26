@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,17 +21,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
+import org.springframework.core.testfixture.security.TestPrincipal;
 import org.springframework.http.HttpHeaders;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.socket.AbstractHttpRequestTests;
 import org.springframework.web.socket.WebSocketHandler;
-import org.springframework.web.socket.handler.TestPrincipal;
 import org.springframework.web.socket.server.HandshakeHandler;
 import org.springframework.web.socket.server.support.OriginHandshakeInterceptor;
 import org.springframework.web.socket.sockjs.transport.SockJsSessionFactory;
@@ -58,7 +58,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
  * @author Sebastien Deleuze
  * @author Ben Kiefer
  */
-@RunWith(MockitoJUnitRunner.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class DefaultSockJsServiceTests extends AbstractHttpRequestTests {
 
 	private static final String sockJsPrefix = "/mysockjs";
@@ -89,7 +89,7 @@ public class DefaultSockJsServiceTests extends AbstractHttpRequestTests {
 
 
 	@Override
-	@Before
+	@BeforeEach
 	public void setup() {
 		super.setup();
 
@@ -164,8 +164,8 @@ public class DefaultSockJsServiceTests extends AbstractHttpRequestTests {
 	public void handleTransportRequestXhrAllowedOriginsMatch() throws Exception {
 		String sockJsPath = sessionUrlPrefix + "xhr";
 		setRequest("POST", sockJsPrefix + sockJsPath);
-		this.service.setAllowedOrigins(Arrays.asList("https://mydomain1.com", "https://mydomain2.com"));
-		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain1.com");
+		this.service.setAllowedOrigins(Arrays.asList("https://mydomain1.example", "https://mydomain2.example"));
+		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain1.example");
 		this.service.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
 
 		assertThat(this.servletResponse.getStatus()).isEqualTo(200);
@@ -175,8 +175,8 @@ public class DefaultSockJsServiceTests extends AbstractHttpRequestTests {
 	public void handleTransportRequestXhrAllowedOriginsNoMatch() throws Exception {
 		String sockJsPath = sessionUrlPrefix + "xhr";
 		setRequest("POST", sockJsPrefix + sockJsPath);
-		this.service.setAllowedOrigins(Arrays.asList("https://mydomain1.com", "https://mydomain2.com"));
-		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "http://mydomain3.com");
+		this.service.setAllowedOrigins(Arrays.asList("https://mydomain1.example", "https://mydomain2.example"));
+		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "http://mydomain3.example");
 		this.service.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
 
 		assertThat(this.servletResponse.getStatus()).isEqualTo(403);
@@ -186,9 +186,9 @@ public class DefaultSockJsServiceTests extends AbstractHttpRequestTests {
 	public void handleTransportRequestXhrSameOrigin() throws Exception {
 		String sockJsPath = sessionUrlPrefix + "xhr";
 		setRequest("POST", sockJsPrefix + sockJsPath);
-		this.service.setAllowedOrigins(Arrays.asList("https://mydomain1.com"));
-		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain1.com");
-		this.servletRequest.setServerName("mydomain2.com");
+		this.service.setAllowedOrigins(Arrays.asList("https://mydomain1.example"));
+		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain1.example");
+		this.servletRequest.setServerName("mydomain2.example");
 		this.service.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
 
 		assertThat(this.servletResponse.getStatus()).isEqualTo(200);
@@ -198,9 +198,9 @@ public class DefaultSockJsServiceTests extends AbstractHttpRequestTests {
 	public void handleInvalidTransportType() throws Exception {
 		String sockJsPath = sessionUrlPrefix + "invalid";
 		setRequest("POST", sockJsPrefix + sockJsPath);
-		this.service.setAllowedOrigins(Arrays.asList("https://mydomain1.com"));
-		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain2.com");
-		this.servletRequest.setServerName("mydomain2.com");
+		this.service.setAllowedOrigins(Arrays.asList("https://mydomain1.example"));
+		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain2.example");
+		this.servletRequest.setServerName("mydomain2.example");
 		this.service.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
 
 		assertThat(this.servletResponse.getStatus()).isEqualTo(404);
@@ -286,20 +286,20 @@ public class DefaultSockJsServiceTests extends AbstractHttpRequestTests {
 		String sockJsPath = "/websocket";
 		setRequest("GET", sockJsPrefix + sockJsPath);
 		wsService.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
-		assertThat(this.servletResponse.getStatus()).isNotEqualTo((long) 403);
+		assertThat(this.servletResponse.getStatus()).isNotEqualTo(403);
 
 		resetRequestAndResponse();
-		List<String> allowed = Collections.singletonList("https://mydomain1.com");
+		List<String> allowed = Collections.singletonList("https://mydomain1.example");
 		OriginHandshakeInterceptor interceptor = new OriginHandshakeInterceptor(allowed);
 		wsService.setHandshakeInterceptors(Collections.singletonList(interceptor));
 		setRequest("GET", sockJsPrefix + sockJsPath);
-		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain1.com");
+		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain1.example");
 		wsService.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
-		assertThat(this.servletResponse.getStatus()).isNotEqualTo((long) 403);
+		assertThat(this.servletResponse.getStatus()).isNotEqualTo(403);
 
 		resetRequestAndResponse();
 		setRequest("GET", sockJsPrefix + sockJsPath);
-		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain2.com");
+		this.servletRequest.addHeader(HttpHeaders.ORIGIN, "https://mydomain2.example");
 		wsService.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
 		assertThat(this.servletResponse.getStatus()).isEqualTo(403);
 	}
@@ -309,12 +309,12 @@ public class DefaultSockJsServiceTests extends AbstractHttpRequestTests {
 		String sockJsPath = "/iframe.html";
 		setRequest("GET", sockJsPrefix + sockJsPath);
 		this.service.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
-		assertThat(this.servletResponse.getStatus()).isNotEqualTo((long) 404);
+		assertThat(this.servletResponse.getStatus()).isNotEqualTo(404);
 		assertThat(this.servletResponse.getHeader("X-Frame-Options")).isEqualTo("SAMEORIGIN");
 
 		resetRequestAndResponse();
 		setRequest("GET", sockJsPrefix + sockJsPath);
-		this.service.setAllowedOrigins(Collections.singletonList("https://mydomain1.com"));
+		this.service.setAllowedOrigins(Collections.singletonList("https://mydomain1.example"));
 		this.service.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
 		assertThat(this.servletResponse.getStatus()).isEqualTo(404);
 		assertThat(this.servletResponse.getHeader("X-Frame-Options")).isNull();
@@ -323,7 +323,7 @@ public class DefaultSockJsServiceTests extends AbstractHttpRequestTests {
 		setRequest("GET", sockJsPrefix + sockJsPath);
 		this.service.setAllowedOrigins(Collections.singletonList("*"));
 		this.service.handleRequest(this.request, this.response, sockJsPath, this.wsHandler);
-		assertThat(this.servletResponse.getStatus()).isNotEqualTo((long) 404);
+		assertThat(this.servletResponse.getStatus()).isNotEqualTo(404);
 		assertThat(this.servletResponse.getHeader("X-Frame-Options")).isNull();
 	}
 

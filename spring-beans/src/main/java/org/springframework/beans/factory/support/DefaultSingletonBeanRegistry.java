@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry {
 
+	/** Maximum number of suppressed exceptions to preserve. */
+	private static final int SUPPRESSED_EXCEPTIONS_LIMIT = 100;
+
 	/**
 	 * 单实例bean对象的缓存：key：beanName，value:bean
 	 * Cache of singleton objects: bean name to bean instance.
@@ -76,8 +79,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/**
 	 * 早期单实例对象的缓存：key：beanName，value:bean
 	 * Cache of early singleton objects: bean name to bean instance.
-	 */
-	private final Map<String, Object> earlySingletonObjects = new HashMap<>(16);
+	 */	private final Map<String, Object> earlySingletonObjects = new ConcurrentHashMap<>(16);
 
 	/**
 	 * 已经注册的单例beanName集合
@@ -98,9 +100,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	private final Set<String> inCreationCheckExclusions =
 			Collections.newSetFromMap(new ConcurrentHashMap<>(16));
 
-	/**
-	 * List of suppressed Exceptions, available for associating related causes.
-	 */
+	/** Collection of suppressed Exceptions, available for associating related causes. */
 	@Nullable
 	private Set<Exception> suppressedExceptions;
 
@@ -197,16 +197,24 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+		// Quick check for existing instance without full singleton lock
 		Object singletonObject = this.singletonObjects.get(beanName);
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
-			synchronized (this.singletonObjects) {
-				singletonObject = this.earlySingletonObjects.get(beanName);
-				if (singletonObject == null && allowEarlyReference) {
-					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
-					if (singletonFactory != null) {
-						singletonObject = singletonFactory.getObject();
-						this.earlySingletonObjects.put(beanName, singletonObject);
-						this.singletonFactories.remove(beanName);
+			singletonObject = this.earlySingletonObjects.get(beanName);
+			if (singletonObject == null && allowEarlyReference) {
+				synchronized (this.singletonObjects) {
+					// Consistent creation of early reference within full singleton lock
+					singletonObject = this.singletonObjects.get(beanName);
+					if (singletonObject == null) {
+						singletonObject = this.earlySingletonObjects.get(beanName);
+						if (singletonObject == null) {
+							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
+							if (singletonFactory != null) {
+								singletonObject = singletonFactory.getObject();
+								this.earlySingletonObjects.put(beanName, singletonObject);
+								this.singletonFactories.remove(beanName);
+							}
+						}
 					}
 				}
 			}
@@ -274,14 +282,18 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	}
 
 	/**
-	 * Register an Exception that happened to get suppressed during the creation of a
+	 * Register an exception that happened to get suppressed during the creation of a
 	 * singleton bean instance, e.g. a temporary circular reference resolution problem.
 	 *
+	 * <p>The default implementation preserves any given exception in this registry's
+	 * collection of suppressed exceptions, up to a limit of 100 exceptions, adding
+	 * them as related causes to an eventual top-level {@link BeanCreationException}.
 	 * @param ex the Exception to register
+	 * @see BeanCreationException#getRelatedCauses()
 	 */
 	protected void onSuppressedException(Exception ex) {
 		synchronized (this.singletonObjects) {
-			if (this.suppressedExceptions != null) {
+			if (this.suppressedExceptions != null && this.suppressedExceptions.size() < SUPPRESSED_EXCEPTIONS_LIMIT) {
 				this.suppressedExceptions.add(ex);
 			}
 		}
@@ -609,6 +621,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 			} catch (Throwable ex) {
 				if (logger.isInfoEnabled()) {
 					logger.info("Destroy method on bean with name '" + beanName + "' threw an exception", ex);
+			}
+			catch (Throwable ex) {
+				if (logger.isWarnEnabled()) {
+					logger.warn("Destruction of bean with name '" + beanName + "' threw an exception", ex);
 				}
 			}
 		}
@@ -648,6 +664,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * should <i>not</i> have their own mutexes involved in singleton creation,
 	 * to avoid the potential for deadlocks in lazy-init situations.
 	 */
+	@Override
 	public final Object getSingletonMutex() {
 		return this.singletonObjects;
 	}

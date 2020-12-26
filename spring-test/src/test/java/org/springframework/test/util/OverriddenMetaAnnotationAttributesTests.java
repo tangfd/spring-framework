@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package org.springframework.test.util;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.test.context.ContextConfiguration;
@@ -38,10 +38,11 @@ import static org.springframework.test.util.MetaAnnotationUtils.findAnnotationDe
  * @since 4.0
  * @see MetaAnnotationUtilsTests
  */
-public class OverriddenMetaAnnotationAttributesTests {
+@SuppressWarnings("deprecation")
+class OverriddenMetaAnnotationAttributesTests {
 
 	@Test
-	public void contextConfigurationValue() throws Exception {
+	void contextConfigurationValue() throws Exception {
 		Class<MetaValueConfigTestCase> declaringClass = MetaValueConfigTestCase.class;
 		AnnotationDescriptor<ContextConfiguration> descriptor = findAnnotationDescriptor(declaringClass,
 			ContextConfiguration.class);
@@ -57,7 +58,7 @@ public class OverriddenMetaAnnotationAttributesTests {
 	}
 
 	@Test
-	public void overriddenContextConfigurationValue() throws Exception {
+	void overriddenContextConfigurationValue() throws Exception {
 		Class<?> declaringClass = OverriddenMetaValueConfigTestCase.class;
 		AnnotationDescriptor<ContextConfiguration> descriptor = findAnnotationDescriptor(declaringClass,
 			ContextConfiguration.class);
@@ -81,7 +82,7 @@ public class OverriddenMetaAnnotationAttributesTests {
 	}
 
 	@Test
-	public void contextConfigurationLocationsAndInheritLocations() throws Exception {
+	void contextConfigurationLocationsAndInheritLocations() throws Exception {
 		Class<MetaLocationsConfigTestCase> declaringClass = MetaLocationsConfigTestCase.class;
 		AnnotationDescriptor<ContextConfiguration> descriptor = findAnnotationDescriptor(declaringClass,
 			ContextConfiguration.class);
@@ -98,7 +99,7 @@ public class OverriddenMetaAnnotationAttributesTests {
 	}
 
 	@Test
-	public void overriddenContextConfigurationLocationsAndInheritLocations() throws Exception {
+	void overriddenContextConfigurationLocationsAndInheritLocations() throws Exception {
 		Class<?> declaringClass = OverriddenMetaLocationsConfigTestCase.class;
 		AnnotationDescriptor<ContextConfiguration> descriptor = findAnnotationDescriptor(declaringClass,
 			ContextConfiguration.class);
@@ -130,11 +131,11 @@ public class OverriddenMetaAnnotationAttributesTests {
 	}
 
 	@MetaValueConfig
-	public static class MetaValueConfigTestCase {
+	static class MetaValueConfigTestCase {
 	}
 
 	@MetaValueConfig("bar.xml")
-	public static class OverriddenMetaValueConfigTestCase {
+	static class OverriddenMetaValueConfigTestCase {
 	}
 
 	@ContextConfiguration(locations = "foo.xml", inheritLocations = false)

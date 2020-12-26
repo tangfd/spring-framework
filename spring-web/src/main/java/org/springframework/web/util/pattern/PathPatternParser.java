@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.web.util.pattern;
+
+import org.springframework.http.server.PathContainer;
 
 /**
  * Parser for URI path patterns producing {@link PathPattern} instances that can
@@ -36,11 +38,11 @@ public class PathPatternParser {
 
 	private boolean caseSensitive = true;
 
-	private char separator = '/';
+	private PathContainer.Options pathOptions = PathContainer.Options.HTTP_PATH;
 
 
 	/**
-	 * Whether a {@link PathPattern} produced by this parser should should
+	 * Whether a {@link PathPattern} produced by this parser should
 	 * automatically match request paths with a trailing slash.
 	 *
 	 * <p>If set to {@code true} a {@code PathPattern} without a trailing slash
@@ -77,20 +79,22 @@ public class PathPatternParser {
 	}
 
 	/**
-	 * Char that represents the separator to use in the patterns.
-	 * <p>The default is {@code '/'}.
+	 * Set options for parsing patterns. These should be the same as the
+	 * options used to parse input paths.
+	 * <p>{@link org.springframework.http.server.PathContainer.Options#HTTP_PATH}
+	 * is used by default.
 	 * @since 5.2
 	 */
-	public void setSeparator(char separator) {
-		this.separator = separator;
+	public void setPathOptions(PathContainer.Options pathOptions) {
+		this.pathOptions = pathOptions;
 	}
 
 	/**
-	 * Char that represents the separator to use in the patterns.
+	 * Return the {@link #setPathOptions configured} pattern parsing options.
 	 * @since 5.2
 	 */
-	public char getSeparator() {
-		return this.separator;
+	public PathContainer.Options getPathOptions() {
+		return this.pathOptions;
 	}
 
 
@@ -100,7 +104,7 @@ public class PathPatternParser {
 	 * stage. Produces a PathPattern object that can be used for fast matching
 	 * against paths. Each invocation of this method delegates to a new instance of
 	 * the {@link InternalPathPatternParser} because that class is not thread-safe.
-	 * @param pathPattern the input path pattern, e.g. /foo/{bar}
+	 * @param pathPattern the input path pattern, e.g. /project/{name}
 	 * @return a PathPattern for quickly matching paths against request paths
 	 * @throws PatternParseException in case of parse errors
 	 */
@@ -108,4 +112,35 @@ public class PathPatternParser {
 		return new InternalPathPatternParser(this).parse(pathPattern);
 	}
 
+
+	/**
+	 * Shared, read-only instance of {@code PathPatternParser}. Uses default settings:
+	 * <ul>
+	 * <li>{@code matchOptionalTrailingSeparator=true}
+	 * <li>{@code caseSensitivetrue}
+	 * <li>{@code pathOptions=PathContainer.Options.HTTP_PATH}
+	 * </ul>
+	 */
+	public final static PathPatternParser defaultInstance = new PathPatternParser() {
+
+		@Override
+		public void setMatchOptionalTrailingSeparator(boolean matchOptionalTrailingSeparator) {
+			raiseError();
+		}
+
+		@Override
+		public void setCaseSensitive(boolean caseSensitive) {
+			raiseError();
+		}
+
+		@Override
+		public void setPathOptions(PathContainer.Options pathOptions) {
+			raiseError();
+		}
+
+		private void raiseError() {
+			throw new UnsupportedOperationException(
+					"This is a read-only, shared instance that cannot be modified");
+		}
+	};
 }
